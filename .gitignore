@@ -1,0 +1,41 @@
+# Local configuration and credentials
+.env
+.env.*
+*.env
+!.env.example
+
+# Go
+bin/
+coverage.out
+*.coverprofile
+*.test
+
+# Node / optional dashboards
+node_modules/
+coverage/
+.npm/
+
+# Python / repository tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+
+# Build and generated output
+dist/
+build/
+tmp/
+*.log
+
+# Editors and operating systems
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Local Codex app state
+.agents/
+.codex/
