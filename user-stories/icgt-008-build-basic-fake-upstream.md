@@ -16,8 +16,8 @@
 
 - Implement the ICGT-007 provider port in memory.
 - Script ordered exact request expectations and one result or enumerated failure per exchange.
-- Detect request mismatch, extra request, missing request, unconsumed output, and unfinished
-  operation without copying prompt contents into diagnostics.
+- Detect request mismatch, extra request, missing request, and incomplete expected-exchange
+  consumption without copying prompt contents into diagnostics.
 
 ## Locked behavior
 
@@ -28,8 +28,8 @@
 ## Acceptance criteria
 
 1. Exact matching covers every ICGT-007 request field.
-2. Success, enumerated failure, mismatch, omitted/extra request, unconsumed result, and unfinished
-   script scenarios are deterministic.
+2. Success, enumerated failure, mismatch, omitted/extra request, and unfinished script scenarios are
+   deterministic.
 3. Diagnostic tests use sentinel prompt/secret text and prove it is absent.
 4. No filesystem, environment, process, clock, or network dependency participates.
 5. The lesson traces exact matching, result/failure selection, safe diagnostics, and exhaustion

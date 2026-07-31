@@ -42,8 +42,13 @@ Do not create a generic “utils” package or prebuild abstractions for all fiv
 ## Provider boundaries
 
 - Provider SDK values stay inside concrete adapters.
-- `start` or equivalent construction is lazy and performs no network I/O until the operation is
-  consumed.
+- The first non-streaming provider port accepts the caller context and returns one bounded outcome.
+  Do not predesign a lazy asynchronous operation or cleanup barrier before the streaming lifecycle
+  story can test it.
+- Once a later streaming story introduces `start` or equivalent construction, it is lazy and
+  performs no network I/O until the operation is consumed.
+- Enforce provider-SDK dependency boundaries in the first concrete-adapter story, where a real SDK
+  import makes the negative test meaningful.
 - The basic fake verifies exact requests, scripted result/failure, safe mismatch diagnostics, and
   complete script consumption. Add logical stream gates, malformed output, and cancellation
   checkpoints only in the later story that owns the stream grammar and concurrency state.

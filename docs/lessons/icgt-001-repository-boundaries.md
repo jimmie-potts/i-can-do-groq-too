@@ -71,7 +71,8 @@ brand-shaped URL.
 
 - **Authority:** the component whose decision is final for a concern.
 - **Adapter:** a translator that protects domain code from another system's shape.
-- **Baseline:** direct OpenAI behavior used to measure gateway parity and overhead.
+- **Baseline:** direct OpenAI infrastructure behavior used to measure gateway semantics and overhead;
+  coding-task parity waits for a harness-owned adapter.
 - **Capability:** behavior a provider has proved it can support.
 - **Handoff contract:** a versioned cross-repository mapping for requests, streams, errors, and
   cancellation.
@@ -79,8 +80,8 @@ brand-shaped URL.
 ## Architecture and invariants
 
 ```text
-Harness workflow -> Harness Provider port -> FastGate adapter -> FastGate -> provider adapter
-      owns task          owns turn meaning       translates       routes       owns vendor wire
+Harness workflow -> Harness Provider port -> CAH-owned FastGate adapter -> FastGate -> provider adapter
+      owns task          owns turn meaning             translates              routes       owns vendor wire
 ```
 
 Important invariants:
@@ -95,7 +96,8 @@ Important invariants:
 ## Practical walkthrough
 
 1. Read the ownership matrix in [Architecture](../architecture.md).
-2. Follow the harness integration section from direct OpenAI to a future separate FastGate adapter.
+2. Follow the harness integration section from direct OpenAI to a future CAH-owned FastGate adapter
+   consuming FastGate-owned schema and fixtures.
 3. Review ADR 0003 and list information that would be lost by pretending Responses and Chat
    Completions were identical.
 4. Review each component README and find its explicit non-responsibilities.

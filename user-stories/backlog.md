@@ -28,9 +28,17 @@ implementation. The detailed dependency-ready sequence lives in [README.md](READ
 ## M3 - Live providers and harness integration
 
 - Opt-in OpenAI adapter with automatic SDK retries disabled.
-- Direct-versus-gateway parity and overhead measurements.
-- Versioned harness-to-FastGate handoff contract.
-- Separate harness FastGate adapter; do not reuse the direct OpenAI adapter or `OPENAI_BASE_URL`.
+- Direct-versus-gateway wire, failure, retry, cancellation, and overhead measurements; no coding-task
+  parity claim before a harness adapter exists. Use a repository-owned measurement client rather
+  than depending on Code Assist Harness.
+- Versioned harness-to-FastGate handoff pinned to an adapter-ready harness contract snapshot.
+- FastGate-owned schema, fixtures, conformance artifacts, and client integration guidance.
+- ICGT-021 packaging that preserves ICGT-020's frozen artifacts and records a manifest/digest;
+  semantic changes require a new version and handoff review.
+- A separate Code Assist Harness-owned FastGate adapter; do not reuse the direct OpenAI adapter or
+  `OPENAI_BASE_URL`.
+- Trusted endpoint/authentication, TLS, proxy, redirect, and confirmed-versus-unconfirmed upstream
+  cleanup policy in the handoff.
 - Groq adapter for limited, evaluated tasks.
 - Capability-aware rejection, emulation, or routing.
 

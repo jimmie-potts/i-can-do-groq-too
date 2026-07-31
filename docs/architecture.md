@@ -15,7 +15,7 @@ current implementation status.
                  | workflow | tools | approvals | audit |
                  +------------------+-------------------+
                                     |
-                      provider-neutral model turn
+                    versioned FastGate client contract
                                     |
                                     v
 +---------------- inference platform monorepo ----------------+
@@ -48,6 +48,8 @@ current implementation status.
 | Tool validation, approval, and execution | Code Assist Harness | FastGate never executes repository or shell tools. |
 | Correctness and task-quality evaluation | Code Assist Harness | LatencyLab may combine these results but does not redefine correctness. |
 | Model HTTP/SSE transport and provider translation | FastGate | SDK and provider wire types remain adapter-local. |
+| FastGate wire schema, fixtures, and server-side conformance | FastGate | Publish versioned language-neutral artifacts; do not export internal packages as a client SDK. |
+| Harness-side `FastGateProvider` implementation and configuration | Code Assist Harness | Translate the pinned FastGate contract into the existing harness port without repurposing its direct OpenAI adapter. |
 | Provider selection and capability-aware routing | FastGate | Unsupported capabilities are explicit; no silent field dropping. |
 | Provider/network retry and circuit policy | FastGate | Avoid hidden retries in the harness and provider SDK. |
 | Client cancellation intent | Code Assist Harness | FastGate must propagate the resulting disconnect/cancel upstream. |
@@ -71,14 +73,15 @@ The current harness provider port already expresses the essential seam:
 - no provider SDK values in harness state.
 
 That port should not be redesigned for FastGate now. The planned direct OpenAI adapter remains the
-first baseline in the locked CAH-023 sequence. FastGate later receives its own harness adapter
-rather than masquerading as the official OpenAI endpoint.
+first baseline in the locked CAH-023 sequence. This repository later publishes a versioned FastGate
+wire contract and conformance bundle. A separate Code Assist Harness story owns the client adapter
+rather than this repository writing harness code or masquerading as the official OpenAI endpoint.
 
 ```text
 Harness Provider implementations
   - FakeProvider                  implemented in the harness
   - OpenAIProvider               planned direct baseline
-  - FastGateProvider             future, separate adapter
+  - FastGateProvider             future, CAH-owned separate adapter
 
 FastGate upstream implementations
   - Deterministic fake upstream  first local infrastructure proof
@@ -87,13 +90,14 @@ FastGate upstream implementations
   - Self-hosted upstream         later cache/runtime experiments
 ```
 
-### Changes the harness may need later
+### Changes Code Assist Harness may own later
 
 These are future stories, not current prerequisites:
 
-1. **A separate FastGate provider adapter.** It implements the existing harness port and has its own
-   endpoint and logical-model-alias configuration. It must not weaken the fixed official endpoint
-   and exact model allowlist in the planned CAH-023 direct OpenAI contract.
+1. **A separate FastGate provider adapter.** A future harness story implements the existing harness
+   port and has its own endpoint and logical-model-alias configuration. This repository supplies
+   the pinned wire schema, fixtures, and integration guidance. The adapter must not weaken the fixed
+   official endpoint and exact model allowlist in the planned CAH-023 direct OpenAI contract.
 2. **Capability negotiation.** Add only when the harness requests a feature that providers differ
    on, such as tools, structured output, provider-managed state, or cache controls. Capability
    absence must fail before paid work begins.
@@ -111,6 +115,56 @@ These are future stories, not current prerequisites:
 
 No current harness change is required merely to create this repository.
 
+### Cross-repository contract and handoff
+
+The repositories share protocol artifacts, not internal source packages:
+
+| Artifact or behavior | Owner | Evidence stage |
+| --- | --- | --- |
+| FastGate non-streaming v1 schema and valid/invalid fixtures | This repository | ICGT-006 selects and versions them. |
+| Future stream, cancellation, and cleanup fixtures | This repository | Added by the stories that implement and test those behaviors. |
+| Joint harness-to-FastGate profile | Both repositories, each for its owned side | ICGT-020 freezes FastGate guarantees and candidate client requirements against a pinned harness snapshot; a future CAH story must accept and implement the client side. |
+| `FastGateProvider` mapping and harness-port compliance | Code Assist Harness | A future CAH-owned story pins the FastGate contract and runs harness-side conformance tests. |
+
+ICGT-006 must classify every current harness request, operation, and event semantic as exact, lossy,
+explicitly unsupported, or deferred. The matrix covers ordered conversation roles/content; ordered
+repository-instruction source/content; text delta/completion; provider-emitted tool-call identity,
+name, and arguments; optional, non-authoritative, non-negative usage; normalized failure code,
+bounded control-safe message, and retryability; exactly-one terminal behavior; cancellation;
+no-later-event behavior; repeatable local cleanup; and confirmed versus unconfirmed upstream
+cleanup. The committed CAH-020 usage value has no upper bound; a later bound is mapped only after
+ICGT-020 pins a harness revision containing it. Fixed per-code messages are planned CAH-023 adapter
+policy, not a promise of the current provider-neutral port.
+
+Required semantic loss blocks ADR 0003 unless a named versioned extension preserves it. The current
+harness request has no tool declaration. A future client-declared unsupported capability can be
+rejected before paid work; an unsolicited provider-emitted tool event can only become a bounded
+post-dispatch failure. Neither case may be silently discarded or described as the other.
+
+Endpoint, authentication, and logical model alias are adapter configuration, not fields silently
+invented in the current harness `ProviderRequest`. The joint ICGT-020 profile pins an immutable
+harness contract snapshot and exact FastGate schema/fixture versions, then separates ownership:
+
+- FastGate publishes supported protocol/authentication schemes, server TLS and redirect behavior,
+  logical aliases, capability admission, normalized wire failures, bounded identifiers, cancellation
+  observation, and upstream-cleanup telemetry.
+- Code Assist Harness owns trusted endpoint selection, credential source/scope/rotation/redaction,
+  TLS verification and any explicit loopback-only HTTP exception, redirect following, ambient versus
+  explicit proxy/environment trust, request/event/failure mapping, retry behavior, and local
+  stream/resource cleanup. It never reuses ambient `OPENAI_BASE_URL` for this adapter.
+
+ICGT-020 freezes the versioned source artifacts. ICGT-021 packages and validates that exact content,
+records the bundle manifest and digest, and may not change its semantics. A semantic change returns
+to the handoff review under a new contract version. The future CAH-owned adapter pins the published
+manifest/digest before the joint profile is called accepted in both repositories.
+
+Local cleanup is not proof that a remote provider stopped work. “Confirmed” requires an explicit
+provider terminal cancellation/termination acknowledgement correlated to the active attempt;
+context return, local connection/body closure, or absence of later harness events remains
+unconfirmed. In v1, FastGate records that certainty as bounded operational telemetry, not as a
+harness transcript field or client terminal guarantee. A later client-visible cleanup result
+requires a versioned contract extension.
+
 ## The real integration tension: API semantics
 
 The original FastGate idea used `POST /v1/chat/completions`. The locked CAH-023 plan makes the
@@ -127,8 +181,8 @@ Therefore:
 - resolve FastGate's external protocol in [ADR 0003](adr/0003-fastgate-api-surface.md) before its
   first endpoint story.
 
-A separate FastGate adapter can translate whichever reviewed protocol is chosen into the existing
-harness event model.
+A later CAH-owned FastGate adapter can translate whichever reviewed protocol is chosen into the
+existing harness event model using the pinned schema and fixtures published here.
 
 ## Provider capabilities
 

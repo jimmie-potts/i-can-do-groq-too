@@ -58,10 +58,18 @@ one only by adding a reviewed story and lesson after its dependency evidence exi
 | ICGT-016 | Bound slow-client backpressure | ICGT-015 |
 | ICGT-017 | Record low-cardinality latency and usage metrics | ICGT-016 |
 | ICGT-018 | Add the opt-in OpenAI upstream adapter | ICGT-017 |
-| ICGT-019 | Compare direct OpenAI with FastGate-to-OpenAI | ICGT-018 |
-| ICGT-020 | Define the harness-to-FastGate v1 handoff | ICGT-019 |
-| ICGT-021 | Add a separate FastGate adapter to the harness | ICGT-020 plus harness readiness |
+| ICGT-019 | Compare direct OpenAI and FastGate at the infrastructure boundary | ICGT-018 |
+| ICGT-020 | Define the versioned harness-to-FastGate v1 handoff | ICGT-019 plus an adapter-ready harness contract |
+| ICGT-021 | Publish FastGate v1 conformance artifacts and client integration guidance | ICGT-020 |
 | ICGT-022 | Add the first limited Groq upstream path | ICGT-019 |
+
+ICGT-019 uses a repository-owned measurement client to compare the same bounded workload directly
+and through FastGate; it does not depend on a harness adapter or claim coding-task parity. ICGT-020
+pins the then-current immutable harness provider contract and exact FastGate schema/fixture source
+artifacts, then defines a joint handoff with server and client ownership separated. ICGT-021 remains
+FastGate-owned: it packages and validates those exact artifacts, records their manifest/digest, and
+cannot alter semantics without a new version. A later Code Assist Harness story implements
+`FastGateProvider`, accepts the client side of the profile, and precedes any coding-task parity claim.
 
 See [the outcome backlog](backlog.md) for LatencyLab, operator, TenantPlane, and FleetSim milestones.
 

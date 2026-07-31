@@ -14,13 +14,15 @@
 
 ## Quick summary
 
-This unit will create the smallest FastGate process with an honest health response and bounded
-shutdown. It teaches that lifecycle ownership comes before provider and streaming complexity.
+This unit will materialize the reviewed Go module/workspace scaffold and create the smallest
+FastGate process with an honest health response and bounded shutdown. It teaches that build and
+process ownership come before provider and streaming complexity.
 
 ## Learning objectives
 
-You should be able to explain Go module choice, HTTP server ownership, context cancellation, signal
-handling, graceful shutdown, and deterministic lifecycle tests.
+You should be able to explain how a reviewed module decision becomes checked files, how the gate
+discovers every module, HTTP server ownership, context cancellation, signal handling, graceful
+shutdown, and deterministic lifecycle tests.
 
 ## Why this unit matters
 
@@ -49,6 +51,7 @@ recording a terminal state.
 Planned flow:
 
 ```text
+accepted scaffold manifest -> materialize module/workspace -> offline gate discovers every module
 validated configuration -> construct server -> serve health
 signal/context cancel -> stop admission -> bounded shutdown -> return outcome
 ```
@@ -59,13 +62,15 @@ database, or TenantPlane is available.
 ## Practical walkthrough
 
 After ICGT-004 accepts the Go toolchain/module ADR and the toolchain is available, the implementation
-creates one executable, one testable server construction seam, one health handler, and one bounded
-shutdown path. Provider packages and inference endpoints remain absent.
+first creates exactly the selected `go.mod`/`go.work` layout and updates the offline gate to discover
+all of it. It then creates one executable, one testable server construction seam, one health handler,
+and one bounded shutdown path. Provider packages and inference endpoints remain absent.
 
 ## Personal code review map
 
 | Review path | Why it matters | Question to answer |
 | --- | --- | --- |
+| Planned `go.mod`/`go.work` and gate discovery | Turns the accepted boundary into enforced files | Can any selected module escape the offline gate? |
 | Planned service composition root | Owns startup and shutdown | Who joins every started resource? |
 | Planned lifecycle tests | Prove health and bounded cleanup | How is time controlled without sleeps? |
 
@@ -76,6 +81,8 @@ None. Replace this section with exact Go excerpts after implementation.
 ## Failure scenarios to study
 
 - Port binding fails before serving.
+- A selected component module exists but the gate omits it.
+- The module requests an unavailable toolchain and validation tries to download it.
 - Configuration is invalid.
 - A shutdown request races a health request.
 - Graceful shutdown exceeds its bound.
@@ -101,6 +108,7 @@ not to make the initial service look complete.
 ## Key takeaways
 
 - Lifecycle ownership precedes provider behavior.
+- The first code story must implement the exact module/workspace handoff from the decision story.
 - Health claims only what the local process can prove.
 - Every started resource needs a bounded stopping and joining rule.
 
@@ -112,8 +120,8 @@ not to make the initial service look complete.
 
 ## Teach-back questions
 
-1. Which code should own the HTTP server and why?
-2. What failure occurs when a shutdown timer exists but the underlying goroutine is never joined?
+1. How should the gate prove that it discovered every module selected by ICGT-004?
+2. Which code should own the HTTP server, shutdown timer, and resource join—and why?
 3. When would separate readiness and liveness endpoints become justified?
 
 ## Further reading

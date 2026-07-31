@@ -47,9 +47,9 @@ the small project-owned port and be strict about the interaction the current uni
 ## Architecture and invariants
 
 ```text
-test -> expected exchanges -> Fake upstream operation -> controlled observations
-  |                                                        |
-  +---------------- assert complete <----------------------+
+test -> expected exchanges -> Fake upstream invocation -> one controlled result/failure
+  |                                                               |
+  +--------------------- assert script complete <-----------------+
 ```
 
 Streaming, single-consumer async state, logical gates, and cancellation are deliberately deferred to
@@ -75,7 +75,7 @@ None. Add exact fake and test excerpts after implementation.
 
 - Actual request differs in a secret-bearing field: report only a bounded field path.
 - Test forgets to call the expected request: exhaustion fails at teardown.
-- Consumer ignores the result: remaining expected interaction makes verification fail.
+- Test omits an expected exchange: the remaining script makes verification fail.
 
 ## What changed during implementation
 

@@ -63,7 +63,8 @@ OpenAI Responses loop and expands to FastGate and Groq later. This does not merg
 - The harness owns task history, model-turn orchestration, tools, approvals, audit, and evaluation.
 - FastGate owns model transport, provider capabilities, provider/network retries, routing, and
   operational telemetry.
-- The harness calls OpenAI directly first, then gains a separate FastGate adapter.
+- The harness calls OpenAI directly first, then a later Code Assist Harness story may add a separate
+  FastGate adapter against versioned schema and fixtures published by this repository.
 - OpenAI is the first live FastGate baseline. Groq follows for limited, measured task categories.
 - Provider state such as `previous_response_id` is optional adapter metadata, never the harness's
   durable source of truth.

@@ -62,6 +62,8 @@ module cache fails rather than mutating the environment.
 3. Predict imports, `go test` commands, and releases for each option.
 4. Decide the initial module identity independently from GitHub remote creation.
 5. Record installation as a user-approved environment step, not a quality-gate side effect.
+6. Hand ICGT-005 an exact scaffold manifest: every `go.mod`/`go.work` path, module identity, and gate
+   command it must materialize and validate.
 
 ## Personal code review map
 
@@ -78,6 +80,7 @@ None. This is a planned decision unit and must not fabricate `go.mod` contents.
 
 - `go.mod` requests a newer toolchain and `go` attempts an automatic download.
 - A nested module is added but the root gate never tests it.
+- The ADR selects one layout but ICGT-005 silently scaffolds a different module boundary.
 - The module path claims a remote/organization the user did not choose.
 - Five component modules create versioning overhead before any component has code.
 
@@ -102,6 +105,7 @@ or team ownership produces measured pressure—not merely because the roadmap na
 
 - Toolchain, module, workspace, and Git repository are separate decisions.
 - Offline checks must fail rather than download missing tools or dependencies.
+- A decision-only unit names the exact scaffold; the next code-bearing unit materializes it.
 - Start with the fewest module boundaries justified by current code.
 
 ## Glossary

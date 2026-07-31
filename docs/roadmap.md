@@ -27,9 +27,11 @@ upstream, returns one normalized non-streaming result, and proves a meaningful f
 Reviewed M1 unit sequence:
 
 - ICGT-004 select the Go toolchain and module strategy without creating source;
-- ICGT-005 bootstrap the service lifecycle;
-- ICGT-006 select the client protocol and accept or replace ADR 0003;
-- ICGT-007 define provider-neutral gateway contracts from that client contract; and
+- ICGT-005 materialize the selected module/workspace scaffold and bootstrap the service lifecycle;
+- ICGT-006 select the client protocol, publish the non-streaming schema/mapping/fixtures, and accept
+  or replace ADR 0003;
+- ICGT-007 define only the provider-neutral non-streaming gateway contract required by the next
+  fake; and
 - ICGT-008 build the basic non-streaming deterministic fake upstream.
 
 Later units split endpoint mapping, normalized transport failures, stream grammar, and deterministic
@@ -44,14 +46,37 @@ Expected small units include SSE framing, fake streaming, client cancellation, u
 slow-client bounds, and basic metrics. Each becomes implementation-ready only when the previous
 contract is observed in code.
 
+The asynchronous provider-operation, cancellation, and cleanup-barrier contract is introduced only
+when the stream grammar can exercise it. Concrete provider-SDK dependency enforcement waits for the
+first concrete adapter.
+
 ### M3 - Live provider baseline and harness handoff
 
-**Outcome:** OpenAI is the first opt-in live upstream, direct-versus-gateway behavior is measured,
-and a separate FastGate adapter can be added to Code Assist Harness without weakening its direct
-OpenAI adapter.
+**Outcome:** OpenAI is the first opt-in live upstream, direct-versus-gateway infrastructure behavior
+is measured, and FastGate publishes a versioned handoff and conformance bundle that a later
+Code Assist Harness-owned adapter can consume without weakening its direct OpenAI adapter.
 
 Groq follows only after the OpenAI baseline and deterministic contract tests exist. Initial Groq
 tasks are narrow and evaluated independently.
+
+The handoff sequence is intentionally explicit:
+
+1. ICGT-019 compares direct-provider and gateway wire semantics, normalized outcomes, retry and
+   cancellation behavior, and gateway overhead using a repository-owned measurement client against
+   the same bounded workload. It does not depend on a harness adapter or claim coding-task
+   correctness parity.
+2. ICGT-020 starts only after ICGT-019 and an adapter-ready harness contract snapshot. Under the
+   current harness roadmap, that means CAH-021 through CAH-023 are complete. The handoff pins an
+   immutable harness revision/provider contract plus the exact FastGate schema/fixture versions and
+   source artifacts.
+3. ICGT-020 defines a joint profile: FastGate guarantees its server contract; Code Assist Harness
+   later accepts and owns trusted endpoint/authentication, TLS, proxy, redirect, mapping,
+   failure/retry, cancellation, and local-cleanup policy for its adapter.
+4. ICGT-021 packages and validates the exact frozen artifacts, records the bundle manifest/digest,
+   and may not change semantics without a new contract version and handoff review.
+5. A later Code Assist Harness story owns `FastGateProvider`, pins that manifest/digest, and accepts
+   the client side of the joint profile. Coding-task parity evaluation begins only after that
+   adapter exists, with the harness remaining correctness authority.
 
 ### M4 - LatencyLab
 

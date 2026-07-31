@@ -51,14 +51,15 @@ At this repository's bootstrap, the harness already has a provider-neutral async
 strict deterministic fake. Its next planned units prove one provider-neutral turn and hard limits
 before activating its direct OpenAI Responses adapter. We reuse those lessons here: define a small
 port, prove it with a fake, keep vendor types at the edge, and make cleanup and cancellation part of
-the contract.
+the contract. FastGate owns its versioned wire schema and language-neutral fixtures; Code Assist
+Harness owns any client adapter that consumes them.
 
 FastGate must not block the harness. The intended evolution is:
 
 ```text
 Code Assist Harness -> direct OpenAI adapter
-Code Assist Harness -> FastGate adapter -> OpenAI
-Code Assist Harness -> FastGate adapter -> OpenAI or Groq
+Code Assist Harness -> CAH-owned FastGate adapter -> FastGate -> OpenAI
+Code Assist Harness -> CAH-owned FastGate adapter -> FastGate -> OpenAI or Groq
 ```
 
 The harness continues to own workflow state even when FastGate selects the provider. Groq support

@@ -16,6 +16,11 @@ endpoint, rejects ambient base-URL routing, validates an exact event automaton, 
 retries, and intentionally excludes multi-provider routing. That future adapter must not be
 repurposed as the FastGate adapter.
 
+FastGate owns its public wire contract, schema, and conformance fixtures. Code Assist Harness owns
+the client adapter that translates that contract into its provider port. This ADR can prove
+representability and define non-streaming fixtures; it cannot claim that later streaming,
+cancellation, or cleanup behavior has passed runtime conformance before those behaviors exist.
+
 ## Options
 
 ### A. Chat Completions-compatible subset
@@ -64,13 +69,37 @@ Costs:
 
 ICGT-006 must answer the following through a focused spike and review before this ADR is accepted:
 
-1. Which harness events and tool semantics must survive the boundary?
-2. Can cancellation and terminal cleanup be expressed unambiguously?
-3. How are unsupported capabilities rejected before paid work?
-4. Can provider/model routing remain gateway-owned without leaking vendor fields?
-5. What compatibility claim can contract tests honestly prove?
-6. Can the first unit remain small enough for personal code review?
-7. How will protocol evolution be versioned?
+1. How does each candidate map, field by field, to the current harness's ordered conversation,
+   ordered repository instructions, text and provider-emitted tool events, optional non-authoritative
+   usage, normalized failures, exactly-one terminal behavior, cancellation, and cleanup contract?
+2. Is each semantic exact, lossy, explicitly unsupported, or deferred, and does any required loss
+   block acceptance or require a named versioned extension?
+3. Can cancellation, no-later-event behavior, local resource closure, and confirmed versus
+   unconfirmed upstream cleanup be represented without claiming they are implemented?
+4. How are future client-declared unsupported capabilities rejected before paid work, while an
+   unsolicited unsupported upstream output becomes an honest bounded post-dispatch failure?
+5. Can provider/model routing remain gateway-owned without leaking vendor fields into the harness
+   request contract?
+6. What exact compatibility claim can schema validation and contract tests honestly prove?
+7. What canonical non-streaming schema and language-neutral valid/invalid fixtures does FastGate
+   own?
+8. How will later streaming fixtures and protocol evolution be versioned?
+9. How will both repositories pin the same contract release without sharing internal source code?
+10. Can the first unit remain small enough for personal review?
+
+## Evidence staging
+
+- ICGT-006 owns the compatibility/gap matrix, selected non-streaming v1 schema, and valid/invalid
+  language-neutral fixtures plus their offline gate validation.
+- Later SSE, cancellation, and cleanup stories extend the fixture corpus only after they can prove
+  those behaviors.
+- ICGT-020 pins an adapter-ready harness contract snapshot and turns implemented FastGate behavior,
+  transport policy, and exact schema/fixture source artifacts into the jointly reviewed
+  cross-repository handoff.
+- ICGT-021 packages and validates those frozen artifacts, records a manifest/digest, and cannot
+  change semantics without a new contract version.
+- A later Code Assist Harness story owns `FastGateProvider`, accepts the client side of the profile,
+  pins that manifest/digest, and runs harness-side conformance tests.
 
 ## Provisional constraint
 

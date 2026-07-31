@@ -82,7 +82,8 @@ not require a deck unless a visual materially improves the decision review.
 ## Go conventions
 
 Go is the default language for backend and infrastructure components. Do not create a Go module or
-pin a version before ICGT-004 resolves the module/toolchain ADR.
+pin a version before ICGT-004 resolves the module/toolchain ADR. ICGT-005 then owns materializing
+exactly that selected module/workspace layout and making the offline gate discover all of it.
 
 Once Go exists:
 
