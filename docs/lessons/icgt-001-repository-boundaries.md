@@ -10,7 +10,8 @@
 - **Related architecture:** [Architecture](../architecture.md),
   [ADR 0001](../adr/0001-separate-learning-monorepo.md),
   [ADR 0002](../adr/0002-fake-first-openai-first-live.md), and
-  [proposed ADR 0003](../adr/0003-fastgate-api-surface.md)
+  [ADR 0003](../adr/0003-fastgate-api-surface.md) (proposed when this unit was delivered; now
+  accepted)
 
 > This lesson describes the implemented documentation boundary, not implemented services.
 
@@ -108,7 +109,7 @@ Important invariants:
 | Review path | Why it matters | Question to answer |
 | --- | --- | --- |
 | [Architecture](../architecture.md) | Establishes ownership across repositories and layers | Is any concern authoritative in two places? |
-| [Proposed ADR 0003](../adr/0003-fastgate-api-surface.md) | Prevents an accidental incompatible endpoint | What evidence is needed before selecting the protocol? |
+| [Accepted ADR 0003](../adr/0003-fastgate-api-surface.md) | Selects a FastGate-owned protocol and prevents accidental compatibility claims | What evidence must ICGT-006 still produce before an endpoint depends on it? |
 | [FastGate README](../../gateway/README.md) | Defines data-plane scope and harness handoff | What must FastGate never own? |
 
 ## Implementation code samples
@@ -146,7 +147,8 @@ implemented behavior.
 The first draft inherited the conversation's aspirational worktree flow as if it were current
 harness behavior. Reconciliation against the actual harness roadmap corrected that overclaim. The
 review also identified the API mismatch as the only concrete integration conflict requiring an
-upfront FastGate ADR.
+upfront FastGate ADR. That ADR later selected a small FastGate-owned model-turn protocol while
+leaving its exact v1 contract to ICGT-006.
 
 ## Production expansion
 
@@ -160,8 +162,8 @@ the learning project.
 - For a client disconnect, write which layer observes it, which layer decides task cancellation, and
   which layer closes the provider stream.
 - Classify five example limits as local safety budgets or platform quotas.
-- Compare one Responses tool-call sequence with one Chat Completions tool-call sequence before
-  recommending ADR 0003.
+- Compare one Responses tool-call sequence with one Chat Completions tool-call sequence, then explain
+  why ADR 0003 keeps either compatibility facade outside FastGate v1.
 
 ## Key takeaways
 

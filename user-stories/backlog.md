@@ -12,14 +12,14 @@ implementation. The detailed dependency-ready sequence lives in [README.md](READ
 ## M1 - FastGate non-streaming walking skeleton
 
 - Go toolchain/module decision, then service lifecycle and health.
-- Reviewed external API contract before provider-domain code.
+- Reviewed FastGate-owned model-turn v1 schema and fixtures before provider-domain code.
 - FastGate-owned provider contracts.
 - Basic deterministic fake upstream, followed later by streaming/cancellation controls.
-- One non-streaming request and normalized failure path.
+- One non-streaming FastGate model-turn request and normalized failure path.
 
 ## M2 - FastGate streaming reliability
 
-- SSE grammar and fake streaming.
+- FastGate-owned model-turn SSE grammar and fake streaming.
 - Client cancellation and upstream cleanup.
 - Upstream deadline and cleanup grace.
 - Slow-client backpressure bounds.

@@ -28,14 +28,14 @@ Reviewed M1 unit sequence:
 
 - ICGT-004 select the Go toolchain and module strategy without creating source;
 - ICGT-005 materialize the selected module/workspace scaffold and bootstrap the service lifecycle;
-- ICGT-006 select the client protocol, publish the non-streaming schema/mapping/fixtures, and accept
-  or replace ADR 0003;
+- ICGT-006 define the non-streaming v1 schema, mapping, fixtures, and offline validator for the
+  FastGate-owned protocol selected in ADR 0003;
 - ICGT-007 define only the provider-neutral non-streaming gateway contract required by the next
   fake; and
 - ICGT-008 build the basic non-streaming deterministic fake upstream.
 
-Later units split endpoint mapping, normalized transport failures, stream grammar, and deterministic
-concurrency/cancellation behavior so each review has one primary concept.
+Later units split model-turn endpoint mapping, normalized transport failures, FastGate-owned stream
+grammar, and deterministic concurrency/cancellation behavior so each review has one primary concept.
 
 ### M2 - Streaming reliability
 

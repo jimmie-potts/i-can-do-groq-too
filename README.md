@@ -69,8 +69,8 @@ The harness MVP currently excludes Git-state mutation. If a future reviewed harn
 branch, worktree, commit, or pull-request behavior, that remains a harness concern rather than a
 FastGate feature.
 
-See [Architecture](docs/architecture.md) for the detailed boundary and the open API-contract
-question.
+See [Architecture](docs/architecture.md) for the detailed boundary and the remaining client-contract
+work.
 
 ## Learning and review workflow
 
@@ -126,6 +126,10 @@ lint/race stages arrive with the story that can validate them honestly.
 
 ## Provider and framework direction
 
+- [ADR 0003](docs/adr/0003-fastgate-api-surface.md) selects a small FastGate-owned model-turn
+  protocol as the first public contract. ICGT-006 still owns its exact non-streaming schema, bounds,
+  mapping, fixtures, and offline validator. Chat Completions and Responses compatibility facades are
+  not part of v1.
 - A deterministic fake will precede either live provider, while OpenAI will be the first live
   FastGate provider and Groq will follow after measurable baseline behavior exists.
 - Provider differences are explicit capabilities. Unsupported behavior is rejected, emulated, or
@@ -139,16 +143,13 @@ lint/race stages arrive with the story that can validate them honestly.
 
 ## Open decisions
 
-The following choices are intentionally unresolved:
+The following choices remain intentionally unresolved:
 
-- whether FastGate's first public contract is a Responses-compatible subset, a Chat Completions
-  subset, or a small project-owned model-turn protocol with compatibility facades;
 - one root Go module versus a `go.work` workspace with component modules;
 - the public product name beyond the repository name;
 - the license, database migration tool, optional dashboard stack, and deployment packaging.
 
-Each decision will be resolved by the story that first needs it. See
-[ADR 0003](docs/adr/0003-fastgate-api-surface.md) for the API decision criteria.
+Each remaining decision will be resolved by the story that first needs it.
 
 ## Configuration and secrets
 

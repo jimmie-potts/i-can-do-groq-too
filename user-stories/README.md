@@ -32,7 +32,7 @@ an individual story is the reviewed contract for one small implementation unit.
 | 3 | [ICGT-003: Establish repository checks](icgt-003-establish-repository-checks.md) | [Repository checks](../docs/lessons/icgt-003-repository-checks.md) | M0 | Done | ICGT-002 | Normal |
 | 4 | [ICGT-004: Select the Go toolchain and module strategy](icgt-004-select-go-toolchain.md) | [Go toolchain and modules](../docs/lessons/icgt-004-go-toolchain-and-modules.md) | M1 | Planned | ICGT-003 | High |
 | 5 | [ICGT-005: Bootstrap the FastGate service lifecycle](icgt-005-bootstrap-fastgate-service.md) | [Go service lifecycle](../docs/lessons/icgt-005-go-service-lifecycle.md) | M1 | Planned | ICGT-004 | High |
-| 6 | [ICGT-006: Select FastGate's first client protocol](icgt-006-select-fastgate-api.md) | [Selecting a client protocol](../docs/lessons/icgt-006-selecting-client-protocol.md) | M1 | Planned | ICGT-005 | High |
+| 6 | [ICGT-006: Specify and version FastGate's model-turn v1 contract](icgt-006-select-fastgate-api.md) | [Defining FastGate model-turn v1](../docs/lessons/icgt-006-selecting-client-protocol.md) | M1 | Planned | ICGT-005 | High |
 | 7 | [ICGT-007: Define provider contracts](icgt-007-define-provider-contracts.md) | [Provider contracts](../docs/lessons/icgt-007-provider-contracts.md) | M1 | Planned | ICGT-006 | High |
 | 8 | [ICGT-008: Build the basic deterministic fake upstream](icgt-008-build-basic-fake-upstream.md) | [Basic deterministic fake](../docs/lessons/icgt-008-basic-deterministic-fake.md) | M1 | Planned | ICGT-007 | High |
 
@@ -48,9 +48,9 @@ one only by adding a reviewed story and lesson after its dependency evidence exi
 
 | ID | Outcome slice | Depends on |
 | --- | --- | --- |
-| ICGT-009 | Expose one non-streaming fake-backed inference request | ICGT-008 |
+| ICGT-009 | Expose one fake-backed non-streaming FastGate model-turn request | ICGT-008 |
 | ICGT-010 | Normalize request and upstream failures at the transport boundary | ICGT-009 |
-| ICGT-011 | Define and test the FastGate SSE grammar | ICGT-010 |
+| ICGT-011 | Define and test the FastGate-owned model-turn SSE grammar | ICGT-010 |
 | ICGT-012 | Extend the fake with deterministic stream gates and cancellation | ICGT-011 |
 | ICGT-013 | Stream deterministic fake output through the endpoint | ICGT-012 |
 | ICGT-014 | Propagate client cancellation | ICGT-013 |

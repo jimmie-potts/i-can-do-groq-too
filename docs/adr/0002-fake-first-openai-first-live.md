@@ -15,7 +15,7 @@ failure, and cancellation behavior testable without credentials or network varia
 
 Use the following sequence:
 
-1. Select the external client contract in ADR 0003.
+1. Use the FastGate-owned client protocol selected in ADR 0003.
 2. Define the smallest FastGate-owned provider contracts required by that choice.
 3. Implement a basic non-streaming deterministic fake upstream.
 4. Prove one external request and normalized transport failures against the basic fake.

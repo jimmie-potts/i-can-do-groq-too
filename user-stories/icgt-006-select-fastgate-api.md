@@ -1,25 +1,25 @@
-# ICGT-006 - Select FastGate's first client protocol
+# ICGT-006 - Specify and version FastGate's model-turn v1 contract
 
 - **Status:** Planned
 - **Milestone:** M1 - FastGate non-streaming walking skeleton
 - **Dependencies:** ICGT-005
-- **Lesson:** [Selecting a client protocol](../docs/lessons/icgt-006-selecting-client-protocol.md)
+- **Lesson:** [Defining FastGate model-turn v1](../docs/lessons/icgt-006-selecting-client-protocol.md)
 - **Review priority:** High
 
 ## User story
 
-> As the platform and harness owner, I want FastGate's first request, result, error, and later stream
-> semantics selected before provider-domain code so that northbound client needs drive the internal
-> seam rather than being forced into a premature provider model.
+> As the platform and harness owner, I want the selected FastGate-owned model-turn protocol specified
+> and validated before provider-domain code so that northbound client needs drive the internal seam
+> rather than being forced into a premature provider model.
 
 ## Scope
 
-- Compare a tested Chat Completions subset, Responses subset, and small FastGate-owned model-turn
-  protocol.
-- Use the current harness provider events and locked CAH-023 plan as one client requirement without
-  making the harness the only client.
+- Preserve the ADR's concise comparison with the rejected Chat Completions and Responses subsets
+  without designing or validating either compatibility facade.
+- Use the current harness provider events and CAH-023 direct OpenAI contract as one client
+  requirement without making the harness the only client.
 - Produce a field-by-field mapping from the current harness request, operation, and event contract
-  to each candidate and the selected FastGate contract.
+  to the selected FastGate contract, with rejected-option gaps retained as decision evidence.
 - Define the smallest non-streaming v1 request/result/error contract and versioning rule.
 - Describe how later streaming, tool calls, capabilities, cancellation, and terminal cleanup extend
   or constrain the choice.
@@ -27,12 +27,17 @@
   corpus that later conformance tests in this repository and Code Assist Harness can pin by version.
 - Define one offline schema/fixture validation command and add it to `./scripts/check`.
 - Define the exact compatibility claim contract tests may make.
-- Accept, replace, or split [ADR 0003](../docs/adr/0003-fastgate-api-surface.md).
+- Materialize the direction accepted in [ADR 0003](../docs/adr/0003-fastgate-api-surface.md), or
+  propose a superseding ADR if required semantics prove impossible within a bounded project-owned
+  protocol.
 
 ## Acceptance criteria
 
-1. The comparison includes concrete request/result and future stream examples for all three options.
-2. The accepted ADR names one initial protocol and explains rejected alternatives.
+1. One concise, non-normative comparison explains why Option C remains the v1 choice and why the
+   contract does not claim compatibility with either rejected option. Only the selected protocol
+   receives a schema and fixtures.
+2. The client contract is FastGate-owned and provider-neutral. It does not claim Chat Completions or
+   Responses compatibility or expose either as a v1 alias.
 3. A versioned client contract defines required/optional fields, bounds, authentication placeholder,
    model alias, normalized errors, request correlation, and unknown-field behavior.
 4. The mapping covers ordered conversation roles/content; ordered repository-instruction
@@ -41,11 +46,12 @@
    terminal behavior; cancellation; no-later-event behavior after terminal/local cancellation;
    repeatable local cleanup confirmation; and confirmed versus unconfirmed upstream cleanup.
 5. Every mapped semantic is marked exact, lossy, explicitly unsupported, or deferred to a named
-   versioned extension and owning story. Required semantic loss blocks ADR acceptance until the
-   contract preserves it.
-6. Unsupported client-declared capabilities are rejected explicitly before provider work. An
-   unsolicited unsupported upstream output becomes a bounded failure after dispatch and is never
-   silently discarded or mislabeled as a preflight rejection.
+   versioned extension and owning story. Required semantic loss blocks ICGT-006 completion until the
+   contract preserves it or a reviewed ADR amendment or supersession changes the decision.
+6. The schema, mapping, and fixtures distinguish a client-declared unsupported capability that later
+   runtime must reject before provider work from unsolicited unsupported upstream output that later
+   runtime must map to a bounded post-dispatch failure. This unit does not claim to enforce either
+   behavior at runtime.
 7. FastGate owns the canonical versioned non-streaming schema and valid/invalid fixtures. Streaming,
    cancellation, and cleanup fixtures are added only by the later stories that implement those
    behaviors. Later FastGate tests validate its implementation against the applicable corpus; a
@@ -56,17 +62,17 @@
 9. The mapping distinguishes FastGate adapter configuration—trusted endpoint, authentication, and
    logical model alias—from fields in the current harness provider request.
 10. The mapping assigns adapter implementation to Code Assist Harness and does not weaken or
-   repurpose planned CAH-023.
+   repurpose the CAH-023 direct OpenAI adapter.
 11. No HTTP endpoint, provider port, SDK, live call, or harness adapter is implemented by the spike;
     the fixture validator is contract tooling, not service behavior.
 
 ## Human review checkpoint
 
-- **Production path:** Trace the offline contract validator from the selected schema through every
-  accepted valid fixture; there is no service request path in this unit.
-- **Failure/test path:** Trace one invalid fixture rejected for its intended rule and one required
-  semantic that a candidate cannot represent, plus one unsupported capability, unknown field, and
-  disconnect, to bounded explicit decisions.
+- **Production path:** Trace one representative valid fixture through the selected schema and offline
+  validator; parameterized tests cover the complete corpus. There is no service request path in this
+  unit.
+- **Failure/test path:** Trace one invalid fixture rejected for its intended rule or one required
+  semantic the proposed v1 schema initially cannot represent.
 - **Invariant:** FastGate's internal provider seam is downstream of a reviewed client contract.
 - **Deferred:** Go provider types, fake upstream, HTTP handler, SSE implementation, and adapters.
 
@@ -81,12 +87,13 @@
 
 ## Documentation impact
 
-Accept or replace ADR 0003 and add the first client-contract schema, harness field mapping, and
-language-neutral fixtures under a non-empty contract path introduced by this story.
+Add the first client-contract schema, harness field mapping, language-neutral fixtures, and exact
+compatibility statement under a non-empty contract path introduced by this story. Amend or supersede
+ADR 0003 only if the evidence invalidates its accepted constraints.
 
 ## Out of scope
 
 - Implementing the endpoint or provider port.
 - Implementing or changing the Code Assist Harness adapter or provider port.
-- Supporting both APIs merely to defer the decision.
+- Implementing Chat Completions or Responses compatibility facades.
 - Provider routing, retries, quotas, streaming code, or live-provider integration.

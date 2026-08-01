@@ -9,9 +9,10 @@ contract into one selected upstream operation and returns bounded normalized out
 orchestration, tools, approvals, tenant authority, and deployment reconciliation outside this
 component.
 
-No public inference endpoint may be added until ADR 0003 is accepted. ICGT-004 selects the
-toolchain/module boundary, ICGT-005 creates lifecycle behavior, and ICGT-006 accepts or replaces the
-API ADR before ICGT-007 defines provider-domain behavior or ICGT-008 adds the basic fake.
+ADR 0003 selects a small FastGate-owned model-turn protocol. No public inference endpoint or
+provider-domain contract may be added until ICGT-006 publishes its reviewed non-streaming v1 schema,
+mapping, fixtures, and offline validation. ICGT-004 selects the toolchain/module boundary and
+ICGT-005 creates lifecycle behavior before that contract work.
 
 ## Reviewable package boundaries
 

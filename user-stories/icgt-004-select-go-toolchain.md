@@ -63,4 +63,4 @@ Add the Go toolchain/module ADR and update setup, FastGate, roadmap, and lesson 
 - Installing Go without explicit user approval.
 - Creating a GitHub repository or remote.
 - Creating `go.mod`, `go.work`, source packages, or dependencies.
-- Selecting the FastGate client protocol.
+- Defining the exact schema and fixtures for the selected FastGate client protocol.

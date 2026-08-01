@@ -13,12 +13,16 @@ The initial implementation sequence is intentionally smaller than “build a gat
 1. select the Go toolchain and module boundary;
 2. materialize that exact module/workspace scaffold, then bootstrap a service lifecycle and health
    endpoint;
-3. resolve the external protocol in [ADR 0003](../docs/adr/0003-fastgate-api-surface.md);
-4. define FastGate-owned request, result, and failure values for one non-streaming invocation;
+3. materialize the FastGate-owned protocol selected in
+   [ADR 0003](../docs/adr/0003-fastgate-api-surface.md) as a versioned non-streaming schema and
+   fixtures;
+4. define FastGate-owned provider request, result, and failure values for one non-streaming
+   invocation;
 5. implement a basic non-streaming deterministic fake upstream;
 6. expose one non-streaming endpoint and contract tests;
 7. add structured transport failure mapping;
-8. define the SSE grammar, then extend the fake with deterministic stream gates and cancellation;
+8. define the FastGate-owned model-turn SSE grammar, then extend the fake with deterministic stream
+   gates and cancellation;
 9. stream fake output and propagate client cancellation;
 10. add deadlines, slow-client bounds, and low-cardinality metrics;
 11. add OpenAI as the first opt-in live upstream; and
@@ -54,19 +58,17 @@ FastGate does not own:
 
 ## Code Assist Harness integration
 
-The harness roadmap first calls OpenAI directly through the planned strict CAH-023 adapter. After
-FastGate publishes a stable contract and conformance bundle, a later Code Assist Harness story can
-implement a separate `FastGateProvider` for its existing provider port. This repository does not
-own that harness client code.
+CAH-023 defines the harness's strict direct OpenAI adapter. After FastGate publishes a stable contract
+and conformance bundle, a later Code Assist Harness story can implement a separate `FastGateProvider`
+for its existing provider port. This repository does not own that harness client code.
 
 ICGT-019's earlier infrastructure comparison uses a small repository-owned measurement client for
 the same bounded direct-provider and gateway workload. It does not use Code Assist Harness or claim
 coding-task correctness parity.
 
-Do not point that planned direct OpenAI adapter at a FastGate base URL. CAH-023's locked endpoint,
-model allowlist, Responses stream grammar, disabled retries, and safety assumptions belong to the
-direct baseline. The future CAH-owned FastGate adapter must map the reviewed gateway contract
-explicitly.
+Do not point that direct OpenAI adapter at a FastGate base URL. CAH-023's locked endpoint, model
+allowlist, Responses stream grammar, disabled retries, and safety assumptions belong to the direct
+baseline. The future CAH-owned FastGate adapter must map the reviewed gateway contract explicitly.
 
 The eventual joint handoff must pin an adapter-ready harness contract snapshot and the exact
 FastGate schema/fixture source artifacts. FastGate defines its server guarantees; Code Assist

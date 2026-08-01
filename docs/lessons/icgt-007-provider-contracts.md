@@ -125,5 +125,5 @@ boundary.
 ## Further reading
 
 - [ICGT-007 delivery contract](../../user-stories/icgt-007-define-provider-contracts.md)
-- [Proposed ADR 0003](../adr/0003-fastgate-api-surface.md)
+- [Accepted ADR 0003](../adr/0003-fastgate-api-surface.md)
 - [Code Assist Harness boundary lesson](icgt-001-repository-boundaries.md)

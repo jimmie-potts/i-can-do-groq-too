@@ -4,7 +4,7 @@
 - **Source context:** [Project brief](../../docs/project-brief.md)
 - **Architecture:** [ADR 0001](../../docs/adr/0001-separate-learning-monorepo.md),
   [ADR 0002](../../docs/adr/0002-fake-first-openai-first-live.md), and
-  [proposed ADR 0003](../../docs/adr/0003-fastgate-api-surface.md)
+  [ADR 0003](../../docs/adr/0003-fastgate-api-surface.md) (proposed at bootstrap)
 
 ## Observed starting state
 
@@ -54,13 +54,20 @@ behavior. ModelEndpoint Operator must not claim to deploy harness workers withou
 - Keep raw KV-cache management out of hosted-provider scope.
 - Use one-to-one story and lesson companions with personal review checkpoints.
 
-## Open decisions
+## Open decisions at bootstrap
 
 - FastGate's first external API and stream grammar.
 - Go version and root-versus-multi-module strategy.
 - License selection.
 - Task runner beyond `./scripts/check`.
 - Database migration and optional dashboard choices.
+
+## 2026-08-01 protocol resolution
+
+ADR 0003 is now accepted with Option C: a small, versioned, FastGate-owned model-turn protocol. This
+selects the architectural direction only. ICGT-006 remains Planned and owns the exact non-streaming
+v1 schema, bounds, mapping, valid/invalid fixtures, and offline validator. Chat Completions and
+Responses compatibility facades remain outside v1 and require separate reviewed client evidence.
 
 ## Validation evidence
 

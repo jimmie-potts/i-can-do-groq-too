@@ -30,6 +30,14 @@ data-plane component.
 A programmable implementation of a real port that verifies exact inputs and emits controlled
 outputs, failures, delays, and cancellation points without network or wall-clock uncertainty.
 
+## FastGate model-turn protocol
+
+The versioned, FastGate-owned northbound wire contract for one bounded model interaction. It carries
+client-visible request, result, failure, and later streaming meaning without copying a provider API.
+It is not the harness's agent loop or authority to choose another workflow turn; Code Assist Harness
+uses a separate adapter to translate between those concerns. ICGT-006 still owns the exact v1 schema
+and fixtures.
+
 ## KV cache
 
 Model-runtime tensors that retain attention keys and values for already processed tokens. Hosted

@@ -116,8 +116,10 @@ must not own gateway, control-plane, reconciliation, or scheduling decisions.
 - Hosted-provider prompt caching is an optimization, not durable task state. Raw KV-cache control is
   out of scope until a self-hosted runtime story explicitly introduces it.
 
-The initial FastGate API surface is unresolved. Follow ADR 0003 and do not implement both Responses
-and Chat Completions merely to avoid making the decision.
+ADR 0003 selects a small FastGate-owned model-turn protocol as the initial public contract. ICGT-006
+owns its exact schema, bounds, fixtures, and offline validation. Do not expose Responses or Chat
+Completions as the first endpoint, claim OpenAI compatibility, or add a compatibility facade without
+a separate reviewed client need.
 
 ## Testing and definition of done
 
