@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repository_root"
+
+for variable_name in $(compgen -e); do
+  case "$variable_name" in
+    ANTHROPIC_*|AZURE_OPENAI_*|GOOGLE_API_KEY|GROQ_*|OPENAI_*)
+      unset "$variable_name"
+      ;;
+  esac
+done
+
+export GOPROXY=off
+export GOSUMDB=off
+export GOTOOLCHAIN=local
+
+run_stage() {
+  local label="$1"
+  shift
+  echo "==> $label"
+  "$@"
+}
+
+check_git_whitespace() {
+  git diff --check --no-ext-diff
+  git diff --cached --check --no-ext-diff
+  if git rev-parse --verify HEAD >/dev/null 2>&1; then
+    local empty_tree
+    empty_tree="$(git hash-object -t tree /dev/null)"
+    git diff --check --no-ext-diff "$empty_tree" HEAD -- .
+  fi
+}
+
+check_go_formatting() {
+  local output
+  output="$(gofmt -l .)"
+  if [[ -n "$output" ]]; then
+    echo "Go files require gofmt:" >&2
+    echo "$output" >&2
+    return 1
+  fi
+}
+
+run_stage "Git whitespace" check_git_whitespace
+run_stage "Repository policy and Markdown links" python3 scripts/check_repository.py
+run_stage "Repository policy tests" python3 -m unittest discover -s tests -p 'test_*.py'
+
+if [[ -f go.mod || -f go.work ]]; then
+  if ! command -v go >/dev/null 2>&1; then
+    echo "Go modules exist, but the Go toolchain is unavailable." >&2
+    exit 1
+  fi
+  run_stage "Go formatting" check_go_formatting
+  run_stage "Go tests" go test ./...
+fi
+
+echo "Repository checks passed."
