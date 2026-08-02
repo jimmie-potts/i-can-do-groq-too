@@ -1,6 +1,6 @@
 # ICGT-005 - Bootstrap the FastGate service lifecycle
 
-- **Status:** Planned
+- **Status:** Done
 - **Milestone:** M1 - FastGate non-streaming walking skeleton
 - **Dependencies:** ICGT-004
 - **Lesson:** [Go service lifecycle](../docs/lessons/icgt-005-go-service-lifecycle.md)
@@ -41,17 +41,25 @@
 5. Signal/context cancellation triggers bounded graceful shutdown.
 6. Tests use injected listeners or contexts rather than timing-sensitive sleeps.
 7. The default gate verifies the exact manifest and source inventory, fails if the local toolchain
-   or race prerequisites are incompatible, and uses the complete offline environment selected by
-   ADR 0004. SHA-pinned CI provisioning reads its version from `go.mod` and verifies the selected
-   `GOVERSION` instead of repeating a second version literal.
+   or race prerequisites are incompatible, and gives child stages an explicit environment that
+   omits ambient credential variables, uses a gate-owned `HOME`, and disables isolated Go telemetry.
+   It uses the complete offline environment selected by ADR 0004. SHA-pinned CI provisioning reads
+   its version from `go.mod` and verifies the selected `GOVERSION` instead of repeating a second
+   version literal.
 8. The lesson traces scaffold ownership, service construction, one request, shutdown, and a failure
    path.
 
 ## Human review checkpoint
 
-- **Production path:** Selected root-module scaffold through service construction, listener
-  admission, and health response.
-- **Failure/test path:** Bounded shutdown when active work or server close does not finish promptly.
+- **Production path:** [`go.mod`](../go.mod) through
+  [`main.run`](../gateway/cmd/fastgate/main.go),
+  [`service.New`](../gateway/internal/service/service.go), listener admission, and the bounded health
+  response.
+- **Failure/test path:**
+  [`TestServiceServeFailureRunsBoundedCleanup`](../gateway/internal/service/service_test.go) proves
+  that an unexpected server failure still triggers cleanup and preserves its cause;
+  [`TestServiceShutdownFailureForcesCloseAndJoins`](../gateway/internal/service/service_test.go)
+  proves the deadline, forced close, final join, and safe timeout error without sleeping.
 - **Invariant:** The checked Go layout is the reviewed ICGT-004 layout, and the owner that starts a
   server is responsible for stopping and joining it.
 - **Deferred:** Public inference API, provider port, streaming, metrics, Docker, and Kubernetes.
@@ -68,6 +76,11 @@ this story owns creating the selected root scaffold and teaching the gate how to
 - Focused Go lifecycle and handler tests.
 - Mandatory race-enabled test stage after the entry-condition preflight.
 - `./scripts/check`.
+
+Validated with Go 1.26.5 on Linux/amd64 using the complete offline environment in ADR 0004. Focused
+tests, vet, ordinary tests, the race preflight, race tests, repository-policy tests, Markdown links,
+and Git whitespace checks pass. The rendered and inspected visual companion is linked from the
+[lesson](../docs/lessons/icgt-005-go-service-lifecycle.md).
 
 ## Documentation impact
 

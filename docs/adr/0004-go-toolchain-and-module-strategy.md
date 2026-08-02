@@ -12,11 +12,11 @@ implementation target. Separate components, executables, and deployment units do
 need separate Go modules. A Go module is a dependency, import, and versioning boundary rather than
 an architecture-diagram boundary.
 
-The current WSL environment has no Go installation, and the repository contains no Go module,
-source, or dependency. ICGT-004 must select the future layout before ICGT-005 materializes it. The
-selection must also preserve the canonical gate's offline rule: repository validation may use tools
-and dependencies already available in the environment, but it must not download a compiler, module,
-or checksum data.
+At ICGT-004 acceptance, the WSL environment had no Go installation and the repository contained no
+Go module, source, or dependency. ICGT-004 had to select the future layout before ICGT-005 could
+materialize it. The selection also had to preserve the canonical gate's offline rule: repository
+validation may use tools and dependencies already available in the environment, but it must not
+download a compiler, module, or checksum data.
 
 As of 2026-08-01, Go 1.26.5 is the current stable patch release. It was released on 2026-07-07 and
 includes security and bug fixes. The official [Go release history](https://go.dev/doc/devel/release)
@@ -184,11 +184,17 @@ GONOPROXY=none
 GOSUMDB=off
 GOWORK=off
 GOFLAGS=-mod=readonly
+GOENV=off
 ```
 
 `GONOPROXY=none` prevents an ambient private-module pattern from bypassing `GOPROXY` with a direct
 version-control fetch. `GOWORK=off` prevents a parent-directory workspace from changing the module
-under test. Read-only module mode prevents validation from editing dependency metadata.
+under test. Read-only module mode prevents validation from editing dependency metadata. Before any
+repository child stage, the gate re-executes with an explicit allowlist that omits ambient credential
+variables. It replaces `HOME`, gives Go a fresh temporary `XDG_CONFIG_HOME`, records
+`go telemetry off` there, and verifies both the disabled mode and isolated telemetry directory
+without reading the user's global Git or Go configuration as authority. This is environment
+isolation, not a general filesystem or network sandbox.
 
 CI may download the reviewed Go distribution while preparing the job, before the canonical gate
 starts. Once ICGT-005 creates it, the root `go.mod` is the machine-readable version source of truth.

@@ -24,7 +24,7 @@ evidence.
 | ICGT-002 | [Learning workflow](icgt-002-learning-workflow.md) | Verified against implementation | Not required - documentation unit |
 | ICGT-003 | [Repository checks](icgt-003-repository-checks.md) | Verified against implementation | Not required - small tooling unit |
 | ICGT-004 | [Go toolchain and modules](icgt-004-go-toolchain-and-modules.md) | Verified against implementation | Not required - decision unit |
-| ICGT-005 | [Go service lifecycle](icgt-005-go-service-lifecycle.md) | Planned | Required when verified |
+| ICGT-005 | [Go service lifecycle](icgt-005-go-service-lifecycle.md) | Verified against implementation | [FastGate service lifecycle](assets/icgt-005-go-service-lifecycle.pptx) |
 | ICGT-006 | [Defining FastGate model-turn v1](icgt-006-selecting-client-protocol.md) | Planned | Required when verified - contract tooling |
 | ICGT-007 | [Provider contracts](icgt-007-provider-contracts.md) | Planned | Required when verified |
 | ICGT-008 | [Basic deterministic fake upstream](icgt-008-basic-deterministic-fake.md) | Planned | Required when verified |

@@ -159,7 +159,9 @@ story must also keep default tests on injected or loopback resources.
    automatic download.
 4. Pretend ModelEndpoint Operator later needs independently released Kubernetes dependencies. Use
    the ADR's split criteria to decide whether that is measured evidence for another module.
-5. Confirm that no module or source file exists yet; the exact scaffold belongs to ICGT-005.
+5. Revisit the historical ICGT-004 checkpoint in its implementation note: no module or source file
+   existed then because the exact scaffold belonged to ICGT-005. The module and first FastGate source
+   now exist because ICGT-005 has since been completed.
 
 ## Personal code review map
 
@@ -168,7 +170,7 @@ story must also keep default tests on injected or loopback resources.
 | [ADR 0004](../adr/0004-go-toolchain-and-module-strategy.md) | Owns the accepted version, identity, layout, and future split rule | What evidence—not directory names—would justify a second module? |
 | [Local setup](../setup.md) | Separates user-approved installation from offline validation | Which steps can change the system, and which are read-only? |
 | [ICGT-004 story](../../user-stories/icgt-004-select-go-toolchain.md) | Keeps the decision unit within its reviewed scope | Which files and behaviors are deliberately left to ICGT-005? |
-| [`scripts/check`](../../scripts/check) | Shows the current conditional Go hook that ICGT-005 must replace | Why must Go validation fail rather than disappear once `go.mod` exists? |
+| [ICGT-004 implementation note](../../user-stories/notes/2026-08-01-icgt-004-toolchain-module-decision.md) | Preserves the pre-module tool and gate evidence without pretending the repository is still in that state | Which files and checks did ICGT-005 still own at this checkpoint? |
 
 ## Implementation code samples
 

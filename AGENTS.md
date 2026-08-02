@@ -3,8 +3,9 @@
 ## Purpose and product boundaries
 
 I Can Do Groq Too is a learning-first inference infrastructure monorepo. The intended components are
-FastGate, LatencyLab, ModelEndpoint Operator, TenantPlane, and FleetSim. The current repository is a
-documentation and quality-gate foundation only; do not describe planned services as implemented.
+FastGate, LatencyLab, ModelEndpoint Operator, TenantPlane, and FleetSim. The repository currently
+implements the root Go module and FastGate lifecycle foundation only. Provider inference behavior
+and the other services remain planned; do not describe them as implemented.
 
 `code-assist-harness` is a separate repository and client. It owns coding workflow state, tools,
 approvals, audit records, transcripts, and correctness evaluation. This repository owns

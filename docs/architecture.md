@@ -6,6 +6,14 @@ This document describes ownership and integration rules. It does not claim that 
 components exist. See the [README](../README.md) and [story index](../user-stories/README.md) for
 current implementation status.
 
+## Current implementation slice
+
+ICGT-005 implements the repository-root Go module and the first FastGate process lifecycle. The
+process validates bounded HTTP settings, serves `GET /healthz`, and owns graceful shutdown through
+the final server join. This operational route reports only that the local process is serving. The
+model-turn schema, inference transport endpoint, provider port, fake upstream, and every live
+provider remain deferred to their owning stories.
+
 ## System context
 
 ```text

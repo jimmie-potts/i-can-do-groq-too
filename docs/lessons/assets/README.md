@@ -6,3 +6,7 @@ High-review-priority completed units place a PowerPoint companion here using the
 Do not create placeholder binary files. Add a deck only after the implementation and written lesson
 are stable. Record slide rendering, visual inspection, and overflow validation in the associated
 story note before listing it as verified evidence.
+
+## Verified companions
+
+- [ICGT-005 FastGate service lifecycle](icgt-005-go-service-lifecycle.pptx)
