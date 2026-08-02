@@ -1,9 +1,10 @@
 # ICGT-004 - Select the Go toolchain and module strategy
 
-- **Status:** Planned
+- **Status:** Done
 - **Milestone:** M1 - FastGate non-streaming walking skeleton
 - **Dependencies:** ICGT-003
 - **Lesson:** [Go toolchain and modules](../docs/lessons/icgt-004-go-toolchain-and-modules.md)
+- **Decision:** [ADR 0004](../docs/adr/0004-go-toolchain-and-module-strategy.md)
 - **Review priority:** High
 
 ## User story
@@ -19,7 +20,7 @@
 - Decide one root module versus `go.work` with component modules.
 - Decide the initial module path without inventing a GitHub remote that does not exist.
 - Document WSL installation and version verification without silently modifying the user's system.
-- Define how `./scripts/check` discovers the chosen module/workspace and prevents toolchain or module
+- Define how `./scripts/check` discovers the chosen module layout and prevents toolchain or module
   downloads during its offline run.
 - Name the exact `go.mod`/`go.work` files, module paths, and gate commands that ICGT-005 must
   materialize; this unit records the handoff but creates none of those files.
@@ -27,8 +28,8 @@
 
 ## Acceptance criteria
 
-1. A focused ADR records alternatives, selected Go version policy, exact module/workspace file
-   layout, module identities, gate-discovery commands, and consequences for later components.
+1. A focused ADR records alternatives, selected Go version policy, exact module file layout, module
+   identities, gate-discovery commands, and consequences for later components.
 2. Official current Go documentation supports any time-sensitive version claim.
 3. Setup instructions distinguish installing Go from repository validation and require explicit
    user approval for system changes.
@@ -41,12 +42,14 @@
 
 ## Human review checkpoint
 
-- **Production path:** None; review the accepted toolchain/module ADR and proposed repository paths.
+- **Production path:** None; review the accepted toolchain/module ADR and selected future repository
+  paths.
 - **Failure/test path:** Trace how a missing/mismatched local Go version or requested toolchain
   download fails before source validation is skipped.
 - **Invariant:** Repository checks use the reviewed local toolchain and never download a replacement.
-- **Deferred:** ICGT-005 materializes the selected `go.mod`/`go.work` layout, gate discovery, service
-  source, and health endpoint; dependencies and provider contracts remain later work.
+- **Deferred:** ICGT-005 materializes the selected root `go.mod`, gate discovery, service source,
+  and health endpoint; dependencies, additional modules, workspaces, and provider contracts remain
+  later work.
 
 ## Validation
 
@@ -56,7 +59,7 @@
 
 ## Documentation impact
 
-Add the Go toolchain/module ADR and update setup, FastGate, roadmap, and lesson documentation.
+Added the Go toolchain/module ADR and updated setup, FastGate, roadmap, and lesson documentation.
 
 ## Out of scope
 

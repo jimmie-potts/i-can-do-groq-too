@@ -61,7 +61,7 @@ integration boundaries can first be exercised with deterministic fakes.
   -> working, staged, and committed Git whitespace
   -> dependency-free repository/link/learning policy
   -> repository-checker regression tests
-  -> Go format and tests only when reviewed root go.mod/go.work exists
+  -> placeholder Go format/tests when a root go.mod/go.work appears; ICGT-005 narrows this to ADR 0004
 ```
 
 CI invokes the same script. It does not duplicate validation logic in workflow YAML.
@@ -108,10 +108,11 @@ if [[ -f go.mod || -f go.work ]]; then
 fi
 ```
 
-The current stages run without project dependencies. The explicit root `go.mod`/`go.work` signal
+The current stages run without project dependencies. The placeholder root `go.mod`/`go.work` signal
 avoids activating Go because an ignored dependency happens to contain a module. Missing Go then
-fails explicitly rather than letting code validation disappear. ICGT-004 will lock the root module
-or workspace layout before source exists; ICGT-005 will refine the Go stages against that choice.
+fails explicitly rather than letting code validation disappear. ADR 0004 now selects one root
+`go.mod` and no workspace; ICGT-005 will replace this broad precursor with exact manifest, source,
+vet, ordinary-test, and race-test enforcement.
 
 ### Sample 2: Git owns the content inventory; secret names are checked separately
 

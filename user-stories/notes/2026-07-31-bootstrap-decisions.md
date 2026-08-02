@@ -69,6 +69,14 @@ selects the architectural direction only. ICGT-006 remains Planned and owns the 
 v1 schema, bounds, mapping, valid/invalid fixtures, and offline validator. Chat Completions and
 Responses compatibility facades remain outside v1 and require separate reviewed client evidence.
 
+## 2026-08-01 Go toolchain and module resolution
+
+[ADR 0004](../../docs/adr/0004-go-toolchain-and-module-strategy.md) resolves the bootstrap's Go
+decision with Go 1.26.5 as the minimum and initial exact CI version, one future repository-root
+module named `github.com/jimmie-potts/i-can-do-groq-too`, and no workspace or nested modules. Local
+Go may be newer, but the offline gate will use only the invoked local distribution. ICGT-005 owns
+creating the module and code after explicit toolchain approval and verification.
+
 ## Validation evidence
 
 On 2026-07-31, the final `./scripts/check` pass checked 50 repository files and its eleven durable
