@@ -1,6 +1,7 @@
 # Roadmap
 
-**Status:** Planned outcomes. Only M0 foundation is currently implemented.
+**Status:** Planned outcomes. M0 and the ICGT-004 documentation decision are implemented; no M1
+runtime behavior exists.
 
 ## Delivery principles
 
@@ -26,8 +27,8 @@ upstream, returns one normalized non-streaming result, and proves a meaningful f
 
 Reviewed M1 unit sequence:
 
-- ICGT-004 select the Go toolchain and module strategy without creating source;
-- ICGT-005 materialize the selected module/workspace scaffold and bootstrap the service lifecycle;
+- ICGT-004 (Done) selected Go 1.26.5 and one future root module without creating source;
+- ICGT-005 materialize the selected root-module scaffold and bootstrap the service lifecycle;
 - ICGT-006 define the non-streaming v1 schema, mapping, fixtures, and offline validator for the
   FastGate-owned protocol selected in ADR 0003;
 - ICGT-007 define only the provider-neutral non-streaming gateway contract required by the next

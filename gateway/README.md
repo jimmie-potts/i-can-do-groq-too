@@ -10,9 +10,10 @@ operational telemetry outside application workflows.
 
 The initial implementation sequence is intentionally smaller than “build a gateway”:
 
-1. select the Go toolchain and module boundary;
-2. materialize that exact module/workspace scaffold, then bootstrap a service lifecycle and health
-   endpoint;
+1. select the Go toolchain and module boundary—completed by
+   [ADR 0004](../docs/adr/0004-go-toolchain-and-module-strategy.md);
+2. materialize that exact root-module scaffold, then bootstrap a service lifecycle and health
+   endpoint after the local toolchain preflight;
 3. materialize the FastGate-owned protocol selected in
    [ADR 0003](../docs/adr/0003-fastgate-api-surface.md) as a versioned non-streaming schema and
    fixtures;
@@ -28,9 +29,10 @@ The initial implementation sequence is intentionally smaller than “build a gat
 11. add OpenAI as the first opt-in live upstream; and
 12. add Groq only after direct and gateway baselines can be compared.
 
-The reviewed planned sequence currently stops at steps 1 through 5, but only step 1 is presently
-dependency-ready. Promote one step at a time as its upstream evidence is accepted. Later steps are
-roadmap outcomes until their dependencies produce evidence.
+The reviewed planned sequence currently stops at steps 1 through 5. Step 1 is complete. Step 2 is
+next in dependency order but cannot start until the selected local Go toolchain is explicitly
+approved and verified. Promote one step at a time as its upstream evidence and start conditions are
+accepted. Later steps are roadmap outcomes until their dependencies produce evidence.
 
 ## Responsibilities
 

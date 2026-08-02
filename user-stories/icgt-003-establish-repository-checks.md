@@ -36,8 +36,7 @@
 7. CI uses a SHA-pinned checkout action with read-only repository permission and no persisted
    credentials.
 8. No live provider, credential, package install, or network call occurs in the gate.
-9. Go stages are honest: absent before a reviewed root module/workspace exists and mandatory
-   afterward.
+9. Go stages are honest: absent before the reviewed root module exists and mandatory afterward.
 10. Regression tests cover invalid UTF-8, titled links, repository escape, secret filenames, Git
     ignore behavior, duplicate story/lesson IDs, status mismatch, teach-back count, and required
     CI/test artifacts.

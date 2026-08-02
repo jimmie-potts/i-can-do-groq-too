@@ -7,16 +7,17 @@
 - **Story:** [ICGT-005](../../user-stories/icgt-005-bootstrap-fastgate-service.md)
 - **Review priority:** High
 - **Visual companion:** Planned after implementation
-- **Related architecture:** [FastGate README](../../gateway/README.md) and
+- **Related architecture:** [ADR 0004](../adr/0004-go-toolchain-and-module-strategy.md),
+  [Local setup](../setup.md), [FastGate README](../../gateway/README.md), and
   [FastGate agent guidelines](../../gateway/AGENTS.md)
 
 > All behavior below is planned. No package names or examples are shipped code.
 
 ## Quick summary
 
-This unit will materialize the reviewed Go module/workspace scaffold and create the smallest
-FastGate process with an honest health response and bounded shutdown. It teaches that build and
-process ownership come before provider and streaming complexity.
+This unit will materialize ADR 0004's reviewed root Go module and create the smallest FastGate
+process with an honest health response and bounded shutdown. It teaches that build and process
+ownership come before provider and streaming complexity.
 
 ## Learning objectives
 
@@ -51,7 +52,7 @@ recording a terminal state.
 Planned flow:
 
 ```text
-accepted scaffold manifest -> materialize module/workspace -> offline gate discovers every module
+accepted scaffold manifest -> materialize root module -> offline gate enforces exact layout
 validated configuration -> construct server -> serve health
 signal/context cancel -> stop admission -> bounded shutdown -> return outcome
 ```
@@ -61,16 +62,17 @@ database, or TenantPlane is available.
 
 ## Practical walkthrough
 
-After ICGT-004 accepts the Go toolchain/module ADR and the toolchain is available, the implementation
-first creates exactly the selected `go.mod`/`go.work` layout and updates the offline gate to discover
-all of it. It then creates one executable, one testable server construction seam, one health handler,
-and one bounded shutdown path. Provider packages and inference endpoints remain absent.
+After the approved local-toolchain and race preflight succeeds, the implementation first creates
+exactly ADR 0004's root `go.mod` and updates the offline gate to reject workspaces, nested modules,
+manifest drift, or missing source checks. It then creates one executable, one testable server
+construction seam, one health handler, and one bounded shutdown path. Provider packages and
+inference endpoints remain absent.
 
 ## Personal code review map
 
 | Review path | Why it matters | Question to answer |
 | --- | --- | --- |
-| Planned `go.mod`/`go.work` and gate discovery | Turns the accepted boundary into enforced files | Can any selected module escape the offline gate? |
+| Planned root `go.mod` and gate enforcement | Turns ADR 0004 into an enforced manifest | Can a nested module, workspace, or unreviewed dependency escape the gate? |
 | Planned service composition root | Owns startup and shutdown | Who joins every started resource? |
 | Planned lifecycle tests | Prove health and bounded cleanup | How is time controlled without sleeps? |
 
@@ -81,7 +83,7 @@ None. Replace this section with exact Go excerpts after implementation.
 ## Failure scenarios to study
 
 - Port binding fails before serving.
-- A selected component module exists but the gate omits it.
+- A nested module or workspace exists but the gate tests only the root package pattern.
 - The module requests an unavailable toolchain and validation tries to download it.
 - Configuration is invalid.
 - A shutdown request races a health request.
@@ -108,7 +110,7 @@ not to make the initial service look complete.
 ## Key takeaways
 
 - Lifecycle ownership precedes provider behavior.
-- The first code story must implement the exact module/workspace handoff from the decision story.
+- The first code story must implement the exact root-module handoff from the decision story.
 - Health claims only what the local process can prove.
 - Every started resource needs a bounded stopping and joining rule.
 
@@ -120,7 +122,7 @@ not to make the initial service look complete.
 
 ## Teach-back questions
 
-1. How should the gate prove that it discovered every module selected by ICGT-004?
+1. How should the gate prove that the root module is exact and no nested module or workspace exists?
 2. Which code should own the HTTP server, shutdown timer, and resource join—and why?
 3. When would separate readiness and liveness endpoints become justified?
 

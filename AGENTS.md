@@ -81,9 +81,12 @@ not require a deck unless a visual materially improves the decision review.
 
 ## Go conventions
 
-Go is the default language for backend and infrastructure components. Do not create a Go module or
-pin a version before ICGT-004 resolves the module/toolchain ADR. ICGT-005 then owns materializing
-exactly that selected module/workspace layout and making the offline gate discover all of it.
+Go is the default language for backend and infrastructure components. ADR 0004 selects Go 1.26.5
+and one future repository-root module named `github.com/jimmie-potts/i-can-do-groq-too`. ICGT-005
+owns materializing exactly that `go.mod` and making the offline gate enforce its identity and full
+source inventory. Do not add `go.work`, a nested module, or a `toolchain` directive unless a later
+reviewed decision changes that boundary. Do not create an empty `go.sum`; commit it when a reviewed
+external dependency causes Go to generate it.
 
 Once Go exists:
 

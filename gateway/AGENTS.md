@@ -11,8 +11,8 @@ component.
 
 ADR 0003 selects a small FastGate-owned model-turn protocol. No public inference endpoint or
 provider-domain contract may be added until ICGT-006 publishes its reviewed non-streaming v1 schema,
-mapping, fixtures, and offline validation. ICGT-004 selects the toolchain/module boundary and
-ICGT-005 creates lifecycle behavior before that contract work.
+mapping, fixtures, and offline validation. ADR 0004 selects Go 1.26.5 and one future root module;
+ICGT-005 materializes it and creates lifecycle behavior before that contract work.
 
 ## Reviewable package boundaries
 

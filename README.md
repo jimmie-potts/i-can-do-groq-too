@@ -9,14 +9,16 @@ into one small, observable inference platform.
 
 ## Current status
 
-The repository foundation is implemented: architecture boundaries, delivery stories, lesson
-standards, component briefs, Git hygiene, and an offline documentation quality gate exist. No
-service, provider adapter, database, Kubernetes controller, or simulator has been implemented yet.
+The repository foundation and the ICGT-004 toolchain/module decision are implemented: architecture
+boundaries, delivery stories, lesson standards, component briefs, Git hygiene, an offline
+documentation gate, and [ADR 0004](docs/adr/0004-go-toolchain-and-module-strategy.md) exist. No Go
+module, service, provider adapter, database, Kubernetes controller, or simulator has been
+implemented yet.
 
-[ICGT-004](user-stories/icgt-004-select-go-toolchain.md) is the next dependency-ready decision
-unit. It selects the Go toolchain and module boundary without installing software or creating source.
-[ICGT-005](user-stories/icgt-005-bootstrap-fastgate-service.md) is the first planned code-bearing
-unit and starts only after that decision and local toolchain availability are reviewed.
+[ICGT-005](user-stories/icgt-005-bootstrap-fastgate-service.md) is the next unit in dependency
+order and the first planned code-bearing unit. It starts only after the selected Go 1.26.5-or-newer
+local toolchain and race prerequisites are explicitly approved and verified using the
+[setup guide](docs/setup.md).
 
 ## What we are building
 
@@ -120,9 +122,10 @@ The foundation has no application dependencies. It requires Git, Bash, and Pytho
 ```
 
 The gate is offline. It checks repository text hygiene, required foundation files, local Markdown
-links, story/lesson parity, review metadata, checker regression tests, and Git whitespace rules. Go
-formatting and tests become mandatory when the reviewed root module or workspace exists; further Go
-lint/race stages arrive with the story that can validate them honestly.
+links, story/lesson parity, review metadata, checker regression tests, and Git whitespace rules.
+ICGT-005 will materialize the reviewed root module and make manifest validation, formatting, vet,
+ordinary tests, and race tests mandatory through this same command. Toolchain installation and CI
+job preparation occur before the gate; the gate itself does not download tools or modules.
 
 ## Provider and framework direction
 
@@ -145,7 +148,6 @@ lint/race stages arrive with the story that can validate them honestly.
 
 The following choices remain intentionally unresolved:
 
-- one root Go module versus a `go.work` workspace with component modules;
 - the public product name beyond the repository name;
 - the license, database migration tool, optional dashboard stack, and deployment packaging.
 

@@ -13,8 +13,10 @@ learning evidence.
 | [ADR index](adr/README.md) | Accepted, proposed, and superseded decisions |
 | [Lesson index](lessons/README.md) | One-to-one story learning companions and evidence rules |
 | [Glossary](glossary.md) | Shared domain language |
+| [Local setup](setup.md) | Environment preparation, Go file concepts, and offline validation preflight |
 | [Troubleshooting](troubleshooting.md) | Environment-specific setup failures and workarounds |
 | [User-story index](../user-stories/README.md) | Implementation-ready dependency order and status |
 
 Status labels matter. Planned documents describe intent, not working software. A lesson becomes
-verified only after it points to implemented code and tests and records the observed behavior.
+verified only after it points to implemented artifacts and validation and records the observed
+behavior. Code-bearing lessons must link the exact important source and test paths.

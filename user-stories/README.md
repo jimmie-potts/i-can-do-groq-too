@@ -30,16 +30,17 @@ an individual story is the reviewed contract for one small implementation unit.
 | 1 | [ICGT-001: Record boundaries and decisions](icgt-001-record-boundaries.md) | [Repository boundaries](../docs/lessons/icgt-001-repository-boundaries.md) | M0 | Done | None | High |
 | 2 | [ICGT-002: Establish the learning standard](icgt-002-establish-learning-standard.md) | [Learning workflow](../docs/lessons/icgt-002-learning-workflow.md) | M0 | Done | ICGT-001 | High |
 | 3 | [ICGT-003: Establish repository checks](icgt-003-establish-repository-checks.md) | [Repository checks](../docs/lessons/icgt-003-repository-checks.md) | M0 | Done | ICGT-002 | Normal |
-| 4 | [ICGT-004: Select the Go toolchain and module strategy](icgt-004-select-go-toolchain.md) | [Go toolchain and modules](../docs/lessons/icgt-004-go-toolchain-and-modules.md) | M1 | Planned | ICGT-003 | High |
+| 4 | [ICGT-004: Select the Go toolchain and module strategy](icgt-004-select-go-toolchain.md) | [Go toolchain and modules](../docs/lessons/icgt-004-go-toolchain-and-modules.md) | M1 | Done | ICGT-003 | High |
 | 5 | [ICGT-005: Bootstrap the FastGate service lifecycle](icgt-005-bootstrap-fastgate-service.md) | [Go service lifecycle](../docs/lessons/icgt-005-go-service-lifecycle.md) | M1 | Planned | ICGT-004 | High |
 | 6 | [ICGT-006: Specify and version FastGate's model-turn v1 contract](icgt-006-select-fastgate-api.md) | [Defining FastGate model-turn v1](../docs/lessons/icgt-006-selecting-client-protocol.md) | M1 | Planned | ICGT-005 | High |
 | 7 | [ICGT-007: Define provider contracts](icgt-007-define-provider-contracts.md) | [Provider contracts](../docs/lessons/icgt-007-provider-contracts.md) | M1 | Planned | ICGT-006 | High |
 | 8 | [ICGT-008: Build the basic deterministic fake upstream](icgt-008-build-basic-fake-upstream.md) | [Basic deterministic fake](../docs/lessons/icgt-008-basic-deterministic-fake.md) | M1 | Planned | ICGT-007 | High |
 
-ICGT-001 through ICGT-003 were delivered and validated by the repository bootstrap. Of the planned
-rows, only ICGT-004 is currently dependency-ready. ICGT-005 is the first code-bearing unit and also
-requires a reviewed, locally available Go toolchain. Promote each later row only after its named
-dependency is accepted; no live provider or public inference endpoint is implementation-ready.
+ICGT-001 through ICGT-004 are delivered and validated. ICGT-005 is the next unit in dependency
+order, but it cannot start in the current environment until the reviewed Go toolchain is explicitly
+approved, installed, and verified. It remains the first code-bearing unit. Promote each later row
+only after its named dependency and start conditions are satisfied; no live provider or public
+inference endpoint is implementation-ready.
 
 ## Later outcome slices
 
@@ -84,3 +85,5 @@ text-only unless a visual would materially improve understanding.
 
 - [Bootstrap decisions](notes/2026-07-31-bootstrap-decisions.md) records the recovered conversation,
   harness reconciliation, local tool availability, and intentionally open decisions.
+- [ICGT-004 toolchain and module decision](notes/2026-08-01-icgt-004-toolchain-module-decision.md)
+  records the official-source checks, local preflight, accepted design, and ICGT-005 handoff.
