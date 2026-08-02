@@ -1,6 +1,7 @@
 # FastGate
 
-**Status:** Planned. No Go module, service, endpoint, or provider adapter exists yet.
+**Status:** Lifecycle foundation implemented. FastGate currently serves only operational health;
+no inference endpoint, provider contract, or provider adapter exists yet.
 
 FastGate is the first implementation target: a small inference gateway that gives clients one
 reviewed model-turn contract while keeping provider transport, streaming, routing, rate limits, and
@@ -13,7 +14,7 @@ The initial implementation sequence is intentionally smaller than “build a gat
 1. select the Go toolchain and module boundary—completed by
    [ADR 0004](../docs/adr/0004-go-toolchain-and-module-strategy.md);
 2. materialize that exact root-module scaffold, then bootstrap a service lifecycle and health
-   endpoint after the local toolchain preflight;
+   endpoint after the local toolchain preflight—completed by ICGT-005;
 3. materialize the FastGate-owned protocol selected in
    [ADR 0003](../docs/adr/0003-fastgate-api-surface.md) as a versioned non-streaming schema and
    fixtures;
@@ -29,10 +30,27 @@ The initial implementation sequence is intentionally smaller than “build a gat
 11. add OpenAI as the first opt-in live upstream; and
 12. add Groq only after direct and gateway baselines can be compared.
 
-The reviewed planned sequence currently stops at steps 1 through 5. Step 1 is complete. Step 2 is
-next in dependency order but cannot start until the selected local Go toolchain is explicitly
-approved and verified. Promote one step at a time as its upstream evidence and start conditions are
-accepted. Later steps are roadmap outcomes until their dependencies produce evidence.
+The reviewed planned sequence currently stops at steps 1 through 5. Steps 1 and 2 are complete;
+step 3 is next in dependency order. Promote one step at a time as its upstream evidence and start
+conditions are accepted. Later steps are roadmap outcomes until their dependencies produce evidence.
+
+## Run the lifecycle foundation
+
+From the repository root:
+
+```bash
+go run ./gateway/cmd/fastgate
+```
+
+The process listens on `127.0.0.1:8080`. In another terminal:
+
+```bash
+curl --fail --show-error http://127.0.0.1:8080/healthz
+```
+
+The bounded response is `ok`. Press Ctrl+C in the service terminal to trigger graceful shutdown.
+Use `-listen 127.0.0.1:8081` to select another loopback address. This route proves only that the
+local HTTP process is serving; it does not claim that a model provider or tenant system is ready.
 
 ## Responsibilities
 

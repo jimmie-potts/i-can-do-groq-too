@@ -9,22 +9,22 @@ into one small, observable inference platform.
 
 ## Current status
 
-The repository foundation and the ICGT-004 toolchain/module decision are implemented: architecture
-boundaries, delivery stories, lesson standards, component briefs, Git hygiene, an offline
-documentation gate, and [ADR 0004](docs/adr/0004-go-toolchain-and-module-strategy.md) exist. No Go
-module, service, provider adapter, database, Kubernetes controller, or simulator has been
-implemented yet.
+The repository foundation, Go toolchain decision, and
+[ICGT-005 FastGate lifecycle](user-stories/icgt-005-bootstrap-fastgate-service.md) are implemented.
+The root Go module now contains one standard-library-only executable that validates bounded server
+configuration, serves an operational health response, and shuts down cleanly on cancellation. The
+offline gate enforces the exact module layout and runs formatting, vet, ordinary tests, and race
+tests.
 
-[ICGT-005](user-stories/icgt-005-bootstrap-fastgate-service.md) is the next unit in dependency
-order and the first planned code-bearing unit. It starts only after the selected Go 1.26.5-or-newer
-local toolchain and race prerequisites are explicitly approved and verified using the
-[setup guide](docs/setup.md).
+[ICGT-006](user-stories/icgt-006-select-fastgate-api.md) is next in dependency order. No inference
+request endpoint, provider contract or adapter, database, Kubernetes controller, or simulator has
+been implemented yet.
 
 ## What we are building
 
 | Order | Component | Responsibility | Status |
 | ---: | --- | --- | --- |
-| 1 | [FastGate](gateway/README.md) | Provider transport, streaming, routing, limits, and operational telemetry | Planned |
+| 1 | [FastGate](gateway/README.md) | Provider transport, streaming, routing, limits, and operational telemetry | Lifecycle foundation implemented |
 | 2 | [LatencyLab](latency-lab/README.md) | Inference-aware load, latency, and failure experiments | Planned |
 | 3 | [ModelEndpoint Operator](model-operator/README.md) | Kubernetes reconciliation for inference-facing services | Planned |
 | 4 | [TenantPlane](control-plane/README.md) | Identity, authorization, quota, budget, usage, and audit control plane | Planned |
@@ -98,7 +98,7 @@ verified.
 
 ```text
 .
-├── gateway/              FastGate scope and component-specific guidance
+├── gateway/              FastGate lifecycle source, tests, scope, and guidance
 ├── latency-lab/          LatencyLab scope
 ├── model-operator/       ModelEndpoint Operator scope
 ├── control-plane/        TenantPlane scope
@@ -106,6 +106,7 @@ verified.
 ├── docs/                 Architecture, ADRs, roadmap, glossary, and lessons
 ├── user-stories/         Dependency-ordered delivery contracts and notes
 ├── scripts/              Offline repository checks
+├── go.mod                One reviewed Go module and version source of truth
 ├── AGENTS.md             Repository-wide engineering and learning rules
 └── README.md             Current status and project map
 ```
@@ -115,17 +116,17 @@ create empty planned source trees.
 
 ## Run the current quality gate
 
-The foundation has no application dependencies. It requires Git, Bash, and Python 3.11 or later:
+The service uses only the Go standard library. Validation requires Git, Bash, Python 3.11 or later,
+Go 1.26.5 or later, cgo, and a working C compiler for race tests:
 
 ```bash
 ./scripts/check
 ```
 
-The gate is offline. It checks repository text hygiene, required foundation files, local Markdown
-links, story/lesson parity, review metadata, checker regression tests, and Git whitespace rules.
-ICGT-005 will materialize the reviewed root module and make manifest validation, formatting, vet,
-ordinary tests, and race tests mandatory through this same command. Toolchain installation and CI
-job preparation occur before the gate; the gate itself does not download tools or modules.
+The gate is offline. It checks repository hygiene, local Markdown links, story/lesson parity, exact
+Go module and CI policy, formatting, vet, ordinary tests, race prerequisites, and race tests.
+Toolchain installation and CI job preparation occur before the gate; the gate itself does not
+download tools or modules.
 
 ## Provider and framework direction
 

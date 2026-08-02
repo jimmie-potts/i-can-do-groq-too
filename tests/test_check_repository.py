@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import io
+import os
 import subprocess
 import tempfile
 import unittest
@@ -27,6 +28,24 @@ class RepositoryCheckerTests(unittest.TestCase):
             path = self.root / relative_path
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(f"# {path.stem}\n", encoding="utf-8")
+        (self.root / "go.mod").write_bytes(CHECKER.EXPECTED_GO_MOD)
+        (self.root / ".github" / "workflows" / "check.yml").write_text(
+            """name: Check
+steps:
+  - name: Static policy
+    run: python3 scripts/check_repository.py
+  - name: Set up Go
+    uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+    with:
+      go-version-file: go.mod
+      cache: false
+  - name: Verify Go
+    run: GOTOOLCHAIN=local go env GOVERSION
+  - name: Full gate
+    run: ./scripts/check
+""",
+            encoding="utf-8",
+        )
         (self.root / ".gitignore").write_text(
             """.env
 .env.*
@@ -118,6 +137,188 @@ node_modules/
         files = CHECKER.repository_files()
 
         self.assertNotIn(settings, files)
+
+    def test_go_manifest_must_match_adr_exactly(self) -> None:
+        manifest = self.root / "go.mod"
+        invalid_manifests = (
+            b"module example.invalid\n\ngo 1.26.5\n",
+            CHECKER.EXPECTED_GO_MOD + b"\nignore ./gateway\n",
+        )
+
+        for content in invalid_manifests:
+            with self.subTest(content=content):
+                manifest.write_bytes(content)
+                errors: list[str] = []
+
+                CHECKER.check_go_layout(CHECKER.repository_files(), errors)
+
+                self.assertIn("root go.mod does not match ADR 0004 exactly", errors)
+        manifest.write_bytes(CHECKER.EXPECTED_GO_MOD)
+
+    def test_go_layout_rejects_additional_metadata(self) -> None:
+        forbidden_paths = (
+            "gateway/go.mod",
+            "go.work",
+            "go.work.sum",
+            "go.sum",
+        )
+
+        for relative_path in forbidden_paths:
+            with self.subTest(relative_path=relative_path):
+                path = self.root / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("unexpected\n", encoding="utf-8")
+                errors: list[str] = []
+
+                CHECKER.check_go_layout(CHECKER.repository_files(), errors)
+
+                self.assertTrue(any(relative_path in error for error in errors))
+                path.unlink()
+
+    def test_ci_go_policy_accepts_reviewed_stage_order(self) -> None:
+        errors: list[str] = []
+
+        CHECKER.check_ci_go_policy(errors)
+
+        self.assertEqual(errors, [])
+
+    def test_ci_go_policy_rejects_mutable_action_and_duplicate_version(self) -> None:
+        workflow = self.root / ".github" / "workflows" / "check.yml"
+        content = workflow.read_text(encoding="utf-8")
+        workflow.write_text(
+            content.replace(
+                "actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16",
+                "actions/setup-go@v6",
+            ).replace("go-version-file: go.mod", "go-version-file: go.mod\n      go-version: 1.26.5"),
+            encoding="utf-8",
+        )
+        errors: list[str] = []
+
+        CHECKER.check_ci_go_policy(errors)
+
+        self.assertIn("CI setup-go action must use a 40-character commit SHA", errors)
+        self.assertIn("CI must not repeat a separate go-version literal", errors)
+
+    def test_ci_go_policy_rejects_structural_workflow_bypasses(self) -> None:
+        workflow = self.root / ".github" / "workflows" / "check.yml"
+        reviewed = workflow.read_text(encoding="utf-8")
+        setup_block = """  - name: Set up Go
+    uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+    with:
+      go-version-file: go.mod
+      cache: false
+"""
+        cases = {
+            "second mutable step": (
+                reviewed
+                + "  - name: Dead mutable bypass\n"
+                + "    if: false\n"
+                + "    uses: actions/setup-go@v6\n",
+                (
+                    "CI must contain exactly one actions/setup-go invocation",
+                    "CI setup-go action must use a 40-character commit SHA",
+                ),
+            ),
+            "disabled only step": (
+                reviewed.replace(
+                    "    uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16\n",
+                    "    if: false\n"
+                    "    uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16\n",
+                ),
+                ("CI setup-go step must be unconditional",),
+            ),
+            "setup text inside run block": (
+                reviewed.replace(
+                    setup_block,
+                    """  - name: Setup-shaped shell text
+    run: |
+      echo 'uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16'
+      echo 'go-version-file: go.mod'
+      echo 'cache: false'
+""",
+                ),
+                (
+                    "CI must contain exactly one actions/setup-go invocation",
+                    "CI setup-go action must use a 40-character commit SHA",
+                ),
+            ),
+            "static policy command only echoed": (
+                reviewed.replace(
+                    "run: python3 scripts/check_repository.py",
+                    "run: echo 'python3 scripts/check_repository.py'",
+                ),
+                ("CI must contain exactly one unconditional static policy run step",),
+            ),
+            "version command only commented in a block": (
+                reviewed.replace(
+                    "    run: GOTOOLCHAIN=local go env GOVERSION\n",
+                    "    run: |\n"
+                    "      # GOTOOLCHAIN=local go env GOVERSION\n",
+                ),
+                ("CI must contain exactly one unconditional GOVERSION verification step",),
+            ),
+            "canonical gate command only echoed": (
+                reviewed.replace(
+                    "run: ./scripts/check",
+                    "run: echo './scripts/check'",
+                ),
+                ("CI must contain exactly one unconditional canonical gate run step",),
+            ),
+            "stages split across jobs": (
+                """name: Check
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Static policy
+        run: python3 scripts/check_repository.py
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Verify Go
+        run: GOTOOLCHAIN=local go env GOVERSION
+  gate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Full gate
+        run: ./scripts/check
+""",
+                ("CI policy, setup-go, GOVERSION, and gate steps must share one steps block",),
+            ),
+        }
+
+        for name, (content, expected_errors) in cases.items():
+            with self.subTest(name=name):
+                workflow.write_text(content, encoding="utf-8")
+                errors: list[str] = []
+
+                CHECKER.check_ci_go_policy(errors)
+
+                for expected_error in expected_errors:
+                    self.assertIn(expected_error, errors)
+
+    def test_check_script_scrubs_an_exported_secret_and_isolates_home(self) -> None:
+        environment = os.environ.copy()
+        environment["ICGT_TEST_SENTINEL_SECRET"] = "must-not-reach-a-child-stage"
+        environment["HOME"] = str(self.root / "ambient-home")
+
+        result = subprocess.run(
+            [str(SCRIPT.with_name("check")), "--environment-preflight-only"],
+            cwd=SCRIPT.parent.parent,
+            env=environment,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 0, output)
+        self.assertIn("Credential-free environment preflight passed.", output)
+        self.assertNotIn("ICGT_TEST_SENTINEL_SECRET", output)
+        self.assertNotIn("must-not-reach-a-child-stage", output)
+        self.assertNotIn(str(self.root / "ambient-home"), output)
 
     def test_story_and_lesson_status_must_match(self) -> None:
         story = self.root / "user-stories" / "icgt-999-example.md"
@@ -243,6 +444,9 @@ Example.
             "tests/test_check_repository.py",
             "docs/lessons/AGENTS.md",
             "user-stories/AGENTS.md",
+            "gateway/cmd/fastgate/main.go",
+            "gateway/internal/service/service.go",
+            "gateway/internal/service/service_test.go",
         ):
             with self.subTest(relative_path=relative_path):
                 path = self.root / relative_path

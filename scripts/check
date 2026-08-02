@@ -1,26 +1,69 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "${ICGT_CHECK_SANITIZED:-}" != "1" ]]; then
+  sanitized_environment=(
+    "ICGT_CHECK_SANITIZED=1"
+    "PATH=$PATH"
+  )
+  for variable_name in LANG LC_ALL LC_CTYPE TERM TMPDIR TEMP TMP GOTMPDIR GOCACHE; do
+    if [[ -v "$variable_name" ]]; then
+      sanitized_environment+=("$variable_name=${!variable_name}")
+    fi
+  done
+  exec /usr/bin/env -i "${sanitized_environment[@]}" "$BASH" "${BASH_SOURCE[0]}" "$@"
+fi
+unset ICGT_CHECK_SANITIZED
+
 repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repository_root"
 
-for variable_name in $(compgen -e); do
-  case "$variable_name" in
-    ANTHROPIC_*|AZURE_OPENAI_*|GOOGLE_API_KEY|GROQ_*|OPENAI_*)
-      unset "$variable_name"
-      ;;
-  esac
-done
+check_state_dir="$(mktemp -d "${TMPDIR:-/tmp}/icgt-check.XXXXXX")"
+trap 'rm -rf -- "$check_state_dir"' EXIT
+export HOME="$check_state_dir/home"
+export XDG_CONFIG_HOME="$check_state_dir/config"
+mkdir -p "$HOME" "$XDG_CONFIG_HOME"
 
 export GOPROXY=off
+export GONOPROXY=none
 export GOSUMDB=off
 export GOTOOLCHAIN=local
+export GOWORK=off
+export GOFLAGS=-mod=readonly
+export GOENV=off
 
 run_stage() {
   local label="$1"
   shift
   echo "==> $label"
   "$@"
+}
+
+check_environment_isolation() {
+  local variable_name
+  local -a unexpected=()
+  for variable_name in $(compgen -e); do
+    case "$variable_name" in
+      GOCACHE|GOENV|GOFLAGS|GONOPROXY|GOPROXY|GOSUMDB|GOTOOLCHAIN|GOTMPDIR|GOWORK|HOME|LANG|LC_ALL|LC_CTYPE|OLDPWD|PATH|PWD|SHLVL|TEMP|TERM|TMP|TMPDIR|XDG_CONFIG_HOME|_)
+        ;;
+      *)
+        unexpected+=("$variable_name")
+        ;;
+    esac
+  done
+  if (( ${#unexpected[@]} != 0 )); then
+    echo "Unexpected exported environment variable names:" >&2
+    printf '  %s\n' "${unexpected[@]}" >&2
+    return 1
+  fi
+  if [[ "$GOENV" != "off" || "$GOPROXY" != "off" || "$GOSUMDB" != "off" ]]; then
+    echo "Offline Go environment isolation is incomplete." >&2
+    return 1
+  fi
+  if [[ "$HOME" != "$check_state_dir/home" || "$XDG_CONFIG_HOME" != "$check_state_dir/config" ]]; then
+    echo "Gate-owned home and configuration isolation is incomplete." >&2
+    return 1
+  fi
 }
 
 check_git_whitespace() {
@@ -34,26 +77,109 @@ check_git_whitespace() {
 }
 
 check_go_formatting() {
-  local output
-  output="$(gofmt -l .)"
-  if [[ -n "$output" ]]; then
+  local file
+  local found=0
+  local -a unformatted=()
+  while IFS= read -r -d '' file; do
+    found=1
+    if [[ -n "$(gofmt -l "$file")" ]]; then
+      unformatted+=("$file")
+    fi
+  done < <(git ls-files --cached --others --exclude-standard -z -- '*.go')
+  if (( found == 0 )); then
+    echo "No Go source files were found." >&2
+    return 1
+  fi
+  if (( ${#unformatted[@]} != 0 )); then
     echo "Go files require gofmt:" >&2
-    echo "$output" >&2
+    printf '  %q\n' "${unformatted[@]}" >&2
     return 1
   fi
 }
 
+check_go_tools() {
+  local tool
+  for tool in go gofmt; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+      echo "Required Go tool is unavailable: $tool" >&2
+      return 1
+    fi
+  done
+
+  go telemetry off
+
+  local goroot telemetry_dir telemetry_mode
+  telemetry_mode="$(go env GOTELEMETRY)"
+  telemetry_dir="$(go env GOTELEMETRYDIR)"
+  if [[ "$telemetry_mode" != "off" ]]; then
+    echo "Go telemetry is not disabled for the repository gate: $telemetry_mode" >&2
+    return 1
+  fi
+  if [[ "$telemetry_dir" != "$XDG_CONFIG_HOME/go/telemetry" ]]; then
+    echo "Go telemetry escaped the isolated gate configuration directory." >&2
+    return 1
+  fi
+
+  goroot="$(go env GOROOT)"
+  if [[ "$(readlink -f "$(command -v go)")" != "$(readlink -f "$goroot/bin/go")" ]]; then
+    echo "go does not belong to the invoked local Go distribution: $goroot" >&2
+    return 1
+  fi
+  if [[ "$(readlink -f "$(command -v gofmt)")" != "$(readlink -f "$goroot/bin/gofmt")" ]]; then
+    echo "gofmt does not match the invoked local Go distribution: $goroot" >&2
+    return 1
+  fi
+}
+
+check_go_module() {
+  local actual_gomod
+  actual_gomod="$(go env GOMOD)"
+  if [[ "$(readlink -f "$actual_gomod")" != "$(readlink -f go.mod)" ]]; then
+    echo "Go resolved an unexpected module: $actual_gomod" >&2
+    return 1
+  fi
+  go list -m >/dev/null
+}
+
+check_race_prerequisites() {
+  local goos goarch cgo compiler
+  goos="$(go env GOOS)"
+  goarch="$(go env GOARCH)"
+  cgo="$(go env CGO_ENABLED)"
+  compiler="$(go env CC)"
+  printf 'Race preflight: GOOS=%s GOARCH=%s CGO_ENABLED=%s CC=%s\n' \
+    "$goos" "$goarch" "$cgo" "$compiler"
+  if [[ "$cgo" != "1" ]]; then
+    echo "Race tests require CGO_ENABLED=1 on this platform." >&2
+    return 1
+  fi
+  if [[ -z "$compiler" ]]; then
+    echo "Race tests require a configured C compiler." >&2
+    return 1
+  fi
+  go test -race -run '^$' sync
+}
+
+if (( $# != 0 )); then
+  if [[ "$#" == "1" && "$1" == "--environment-preflight-only" ]]; then
+    run_stage "Credential-free environment" check_environment_isolation
+    echo "Credential-free environment preflight passed."
+    exit 0
+  fi
+  echo "Usage: ./scripts/check [--environment-preflight-only]" >&2
+  exit 2
+fi
+
+run_stage "Credential-free environment" check_environment_isolation
 run_stage "Git whitespace" check_git_whitespace
 run_stage "Repository policy and Markdown links" python3 scripts/check_repository.py
 run_stage "Repository policy tests" python3 -m unittest discover -s tests -p 'test_*.py'
-
-if [[ -f go.mod || -f go.work ]]; then
-  if ! command -v go >/dev/null 2>&1; then
-    echo "Go modules exist, but the Go toolchain is unavailable." >&2
-    exit 1
-  fi
-  run_stage "Go formatting" check_go_formatting
-  run_stage "Go tests" go test ./...
-fi
+run_stage "Go toolchain" check_go_tools
+run_stage "Go module identity" check_go_module
+run_stage "Go formatting" check_go_formatting
+run_stage "Go vet" go vet ./...
+run_stage "Go tests" go test ./...
+run_stage "Go race prerequisites" check_race_prerequisites
+run_stage "Go race tests" go test -race ./...
 
 echo "Repository checks passed."

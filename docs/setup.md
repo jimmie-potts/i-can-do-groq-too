@@ -6,9 +6,9 @@ This guide separates two operations that have different safety boundaries:
 - **repository validation** runs `./scripts/check` with already prepared tools and remains offline
   and credential-free.
 
-The current documentation foundation needs Git, Bash, and Python 3.11 or newer. Go is not required
-by the current gate. A reviewed local Go toolchain becomes an ICGT-005 entry condition before that
-story creates the first module and FastGate source. No Go installation was performed by ICGT-004.
+The repository needs Git, Bash, Python 3.11 or newer, and a local Go 1.26.5-or-newer distribution.
+ICGT-005 created the first module and FastGate source after its approved toolchain and race
+preflight. The gate now requires Go, `gofmt`, cgo, and a working C compiler; it never installs them.
 
 ## Selected Go setup
 
@@ -19,13 +19,12 @@ story creates the first module and FastGate source. No Go installation was perfo
 | Minimum Go version | Go 1.26.5 |
 | Initial CI version | Exactly Go 1.26.5 |
 | Local contributor version | Go 1.26.5 or newer, used with `GOTOOLCHAIN=local` |
-| Future module file | Repository-root `go.mod` |
-| Future module path | `github.com/jimmie-potts/i-can-do-groq-too` |
+| Module file | Repository-root `go.mod` |
+| Module path | `github.com/jimmie-potts/i-can-do-groq-too` |
 | Workspace | No `go.work` until a reviewed second module exists |
 | Initial dependency checksum file | No `go.sum` while only the standard library is used |
 
-The future `go.mod` is intentionally not present yet. ICGT-005 owns creating it after the local
-toolchain preflight succeeds.
+ICGT-005 materialized the exact root `go.mod` after the local toolchain preflight succeeded.
 
 ## What the three Go files mean
 
@@ -38,7 +37,7 @@ toolchain preflight succeeds.
 - which external modules and versions are required; and
 - any explicitly reviewed replacement or exclusion rules.
 
-The future root file will begin as:
+The root file is exactly:
 
 ```go
 module github.com/jimmie-potts/i-can-do-groq-too
@@ -64,8 +63,8 @@ content.
 - an exact lockfile in the same sense as every other package manager.
 
 Do not create or hand-edit an empty `go.sum`. ICGT-005 uses only the standard library, so no
-`go.sum` is expected. The first later story that resolves an external module must commit the
-generated file and define how clean offline validation obtains the dependency contents.
+`go.sum` exists. The first later story that resolves an external module must commit the generated
+file and define how clean offline validation obtains the dependency contents.
 
 ### `go.work`: a local coordinator for multiple modules
 
@@ -138,6 +137,18 @@ executable and command-line options.
 Do not use `go env -w` to persist the repository's offline settings globally. The quality gate owns
 those settings for its child processes so unrelated Go work is not changed.
 
+The gate also re-executes itself with a small allowlist. This omits exported provider, GitHub, cloud,
+SSH-agent, and arbitrarily named ambient secrets from its Git, Python, and Go child environments. It
+replaces `HOME` with a gate-owned temporary directory, disables the user's persistent Go environment
+with `GOENV=off`, creates an isolated `XDG_CONFIG_HOME`, and runs `go telemetry off` there before any
+build command. The temporary state is deleted when the gate exits; the user's global Git and Go
+configuration and telemetry choice are neither used as authority nor changed.
+
+Environment and home isolation are not an operating-system filesystem or network sandbox. Future
+test code could still read an explicitly named external path or open a network connection. Repository
+tests must therefore remain injected or loopback-only, and review must reject explicit credential-file
+access just as it rejects live-provider calls in the default gate.
+
 ## Expected failure behavior
 
 | Symptom | Meaning | Response |
@@ -155,25 +166,37 @@ resources and never require live providers.
 
 ## Run repository validation
 
-Before ICGT-005, the current documentation gate remains:
-
 ```bash
 ./scripts/check
 ```
 
-After ICGT-005 creates the accepted root module, the same command will also verify the manifest,
-format Go files, run vet, run ordinary tests, and run race tests. CI prepares the exact toolchain
-first and then calls this same canonical command; the gate itself does not install anything.
+The command first verifies its credential-isolated environment, then checks the exact manifest, all
+nonignored Go source, matching `go`/`gofmt` tools, formatting, vet, ordinary tests, race prerequisites,
+and race tests. CI prepares the exact toolchain first and then calls this same canonical command; the
+gate itself does not install anything.
 
-## ICGT-005 start condition
+## Run FastGate locally
 
-ICGT-005 may begin only after:
+From the repository root:
 
-1. the user explicitly approves any required Go installation;
-2. the commands above prove a local Go 1.26.5 or newer toolchain and race prerequisites; and
-3. its own code-free implementation plan is reviewed.
+```bash
+go run ./gateway/cmd/fastgate
+```
 
-Until then, the absence of `go.mod`, `go.sum`, `go.work`, and Go source is intentional.
+The default operational listener is loopback-only at `127.0.0.1:8080`. Check it from a second
+terminal:
+
+```bash
+curl --fail --show-error http://127.0.0.1:8080/healthz
+```
+
+The response is `ok`. Press Ctrl+C to cancel the process; the lifecycle owner stops admission,
+drains within five seconds, force-closes if graceful shutdown fails, joins the serving goroutine,
+and returns a safe error on failure. An alternate local port can be selected with
+`-listen 127.0.0.1:8081`.
+
+This route is operational health only. It does not prove provider readiness and is not the future
+model-turn endpoint.
 
 ## Official references
 
