@@ -15,7 +15,8 @@
 ## Scope
 
 - Implement the ICGT-007 provider port in memory.
-- Script ordered exact request expectations and one result or enumerated failure per exchange.
+- Script ordered exact request expectations and one result or enumerated failure per exchange,
+  including failed outcomes with and without bounded usage.
 - Detect request mismatch, extra request, missing request, and incomplete expected-exchange
   consumption without copying prompt contents into diagnostics.
 
@@ -28,8 +29,8 @@
 ## Acceptance criteria
 
 1. Exact matching covers every ICGT-007 request field.
-2. Success, enumerated failure, mismatch, omitted/extra request, and unfinished script scenarios are
-   deterministic.
+2. Success, enumerated failure with absent or present usage, mismatch, omitted/extra request, and
+   unfinished script scenarios are deterministic.
 3. Diagnostic tests use sentinel prompt/secret text and prove it is absent.
 4. No filesystem, environment, process, clock, or network dependency participates.
 5. The lesson traces exact matching, result/failure selection, safe diagnostics, and exhaustion
@@ -38,9 +39,10 @@
 ## Human review checkpoint
 
 - **Production path:** Exact request match through one scripted successful completion.
-- **Failure/test path:** Safe mismatch diagnostics and teardown detection of unconsumed work.
-- **Invariant:** A passing fake-backed test proves both expected output and complete expected
-  interaction.
+- **Failure/test path:** Preserve failed outcomes with absent versus observed-zero usage, then trace
+  safe mismatch diagnostics and teardown detection of unconsumed work.
+- **Invariant:** A passing fake-backed test preserves the exact scripted outcome—including usage
+  absence versus zero—and proves complete expected interaction.
 - **Deferred:** HTTP mapping, SSE, wall-clock timeouts, live adapters, retries, and routing.
 
 ## Validation

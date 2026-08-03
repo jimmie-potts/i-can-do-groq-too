@@ -1,15 +1,14 @@
 {
   "version": "v1",
   "kind": "model_turn.request",
-  "request_id": "req-unknown-field",
+  "request_id": "req-surrogate-pair",
   "model_alias": "learning-text",
   "conversation": [
     {
       "role": "user",
-      "content": "Reject silent extensions."
+      "content": "Explain this emoji: \ud83d\ude00"
     }
   ],
   "instructions": [],
-  "required_capabilities": [],
-  "temperature": 0.2
+  "required_capabilities": []
 }

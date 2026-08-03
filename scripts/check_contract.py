@@ -18,14 +18,46 @@ CONTRACT_RELATIVE = Path("gateway/contracts/model-turn/v1")
 REQUEST_SCHEMA = Path("schema/request.schema.json")
 SUCCESS_SCHEMA = Path("schema/success.schema.json")
 FAILURE_SCHEMA = Path("schema/failure.schema.json")
-CANONICAL_SCHEMAS = (REQUEST_SCHEMA, SUCCESS_SCHEMA, FAILURE_SCHEMA)
+CANONICAL_SCHEMA_METADATA = {
+    REQUEST_SCHEMA: ("urn:fastgate:model-turn:v1:request", "model_turn.request"),
+    SUCCESS_SCHEMA: ("urn:fastgate:model-turn:v1:success", "model_turn.completed"),
+    FAILURE_SCHEMA: ("urn:fastgate:model-turn:v1:failure", "model_turn.failed"),
+}
+CANONICAL_REQUIRED_FIELDS = {
+    REQUEST_SCHEMA: frozenset(
+        {
+            "version",
+            "kind",
+            "request_id",
+            "model_alias",
+            "conversation",
+            "instructions",
+            "required_capabilities",
+        }
+    ),
+    SUCCESS_SCHEMA: frozenset({"version", "kind", "request_id", "output_text"}),
+    FAILURE_SCHEMA: frozenset({"version", "kind", "request_id", "error"}),
+}
+CANONICAL_ROOT_FIELDS = {
+    REQUEST_SCHEMA: CANONICAL_REQUIRED_FIELDS[REQUEST_SCHEMA],
+    SUCCESS_SCHEMA: CANONICAL_REQUIRED_FIELDS[SUCCESS_SCHEMA] | {"usage"},
+    FAILURE_SCHEMA: CANONICAL_REQUIRED_FIELDS[FAILURE_SCHEMA] | {"usage"},
+}
+CANONICAL_SCHEMAS = tuple(CANONICAL_SCHEMA_METADATA)
 SCHEMA_URI = "https://json-schema.org/draft/2020-12/schema"
 MAX_JSON_BYTES = 1_000_000
+MAX_NESTING_DEPTH = 128
+MAX_ENUM_ITEMS = 64
 MAX_ERRORS = 50
 MAX_VIOLATIONS = 25
 MAX_PATH_LENGTH = 240
 CASE_NAME = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?")
 JSON_POINTER = re.compile(r"(?:/(?:[^~/]|~[01])*)*")
+IDENTIFIER_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._:-]*(?![\s\S])"
+CONTROL_SAFE_PATTERN = r"^[^\u0000-\u001F\u007F-\u009F\u2028\u2029]+(?![\s\S])"
+AUDITED_PATTERN_MATCHERS = {
+    pattern: re.compile(pattern) for pattern in (IDENTIFIER_PATTERN, CONTROL_SAFE_PATTERN)
+}
 SUPPORTED_KEYWORDS = {
     "$schema", "$id", "title", "description", "type", "properties", "required",
     "additionalProperties", "items", "minItems", "maxItems", "minLength", "maxLength",
@@ -36,6 +68,10 @@ JSON_TYPES = {"object", "array", "string", "integer", "number", "boolean", "null
 
 class JSONDocumentError(ValueError):
     """A bounded, content-free strict JSON parsing failure."""
+
+
+class JSONArtifactError(JSONDocumentError):
+    """A repository-artifact failure that is not a protocol JSON violation."""
 
 
 class Violation(NamedTuple):
@@ -50,9 +86,9 @@ def strict_json(path: Path) -> Any:
     try:
         raw = path.read_bytes()
     except OSError as error:
-        raise JSONDocumentError("unable to read JSON document") from error
+        raise JSONArtifactError("unable to read JSON document") from error
     if len(raw) > MAX_JSON_BYTES:
-        raise JSONDocumentError("JSON document exceeds the checker size limit")
+        raise JSONArtifactError("JSON document exceeds the checker size limit")
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError as error:
@@ -73,9 +109,9 @@ def strict_json(path: Path) -> Any:
         try:
             parsed = Decimal(value)
         except InvalidOperation as error:
-            raise JSONDocumentError("invalid JSON number") from error
+            raise JSONArtifactError("JSON number exceeds the checker exact-number range") from error
         if not parsed.is_finite():
-            reject_constant(value)
+            raise JSONArtifactError("JSON number exceeds the checker exact-number range")
         return parsed
 
     try:
@@ -91,23 +127,27 @@ def strict_json(path: Path) -> Any:
         raise JSONDocumentError(
             f"invalid JSON syntax at line {error.lineno}, column {error.colno}"
         ) from error
-    except (ValueError, RecursionError) as error:
-        raise JSONDocumentError("invalid JSON structure") from error
+    except RecursionError as error:
+        raise JSONArtifactError("JSON document exceeds the checker nesting limit") from error
+    except ValueError as error:
+        raise JSONArtifactError("JSON document exceeds checker implementation limits") from error
 
 
 def require_unicode_scalars(document: Any) -> None:
     """Reject decoded object keys or values containing an unpaired surrogate."""
-    pending = [document]
+    pending = [(document, 0)]
     while pending:
-        value = pending.pop()
+        value, depth = pending.pop()
+        if depth > MAX_NESTING_DEPTH:
+            raise JSONArtifactError("JSON document exceeds the checker nesting limit")
         if isinstance(value, str):
             if any(0xD800 <= ord(character) <= 0xDFFF for character in value):
                 raise JSONDocumentError("JSON document contains a lone Unicode surrogate")
         elif isinstance(value, list):
-            pending.extend(value)
+            pending.extend((item, depth + 1) for item in value)
         elif isinstance(value, dict):
-            pending.extend(value.keys())
-            pending.extend(value.values())
+            pending.extend((key, depth) for key in value)
+            pending.extend((item, depth + 1) for item in value.values())
 
 
 def matches_type(value: Any, schema_type: str) -> bool:
@@ -163,7 +203,10 @@ def schema_issues(schema: Any) -> list[str]:
 
     def add(path: str, message: str) -> None:
         if len(issues) < MAX_ERRORS:
-            issues.append(f"at {path!r}: {message}"[:500])
+            bounded_path = path
+            if len(bounded_path) > MAX_PATH_LENGTH:
+                bounded_path = bounded_path[: MAX_PATH_LENGTH - 3] + "..."
+            issues.append(f"at {bounded_path!r}: {message}"[:500])
 
     def natural(value: Any) -> bool:
         return matches_type(value, "integer") and value >= 0
@@ -182,7 +225,10 @@ def schema_issues(schema: Any) -> list[str]:
         if natural(node.get(low)) and natural(node.get(high)) and node[low] > node[high]:
             add(path, f"{low} must not exceed {high}")
 
-    def walk(node: Any, path: str, root: bool = False) -> None:
+    def walk(node: Any, path: str, root: bool = False, depth: int = 0) -> None:
+        if depth > MAX_NESTING_DEPTH:
+            add(path, "schema exceeds the checker nesting limit")
+            return
         if not isinstance(node, dict):
             add(path, "a schema node must be an object")
             return
@@ -223,28 +269,25 @@ def schema_issues(schema: Any) -> list[str]:
                 required = []
             elif len(required) != len(set(required)):
                 add(path, "required entries must be unique")
-            if not isinstance(node.get("additionalProperties"), bool):
-                add(path, "object schemas require boolean additionalProperties")
+            if node.get("additionalProperties") is not False:
+                add(path, "object schemas require additionalProperties to be false")
             for name, child in properties.items():
-                walk(child, pointer_join(path, name))
+                walk(child, pointer_join(path, name), depth=depth + 1)
             if any(name not in properties for name in required):
                 add(path, "every required entry must name a property")
         elif schema_type == "array":
             if "items" not in node:
                 add(path, "array schemas require items")
             else:
-                walk(node["items"], pointer_join(path, "items"))
+                walk(node["items"], pointer_join(path, "items"), depth=depth + 1)
             bounds(node, path, "minItems", "maxItems")
         elif schema_type == "string":
             bounds(node, path, "minLength", "maxLength")
             if "pattern" in node:
                 if not isinstance(node["pattern"], str):
                     add(path, "pattern must be a string")
-                else:
-                    try:
-                        re.compile(node["pattern"])
-                    except re.error:
-                        add(path, "pattern must be a valid regular expression")
+                elif node["pattern"] not in AUDITED_PATTERN_MATCHERS:
+                    add(path, "pattern must be an audited language-neutral expression")
         elif schema_type in ("integer", "number"):
             for keyword in ("minimum", "maximum"):
                 if keyword in node and not number(node[keyword]):
@@ -257,6 +300,8 @@ def schema_issues(schema: Any) -> list[str]:
         if "enum" in node:
             if not isinstance(enum, list) or not enum:
                 add(path, "enum must be a non-empty array")
+            elif len(enum) > MAX_ENUM_ITEMS:
+                add(path, f"enum must contain at most {MAX_ENUM_ITEMS} entries")
             elif any(json_equal(a, b) for index, a in enumerate(enum) for b in enum[index + 1 :]):
                 add(path, "enum entries must be unique")
             elif valid_type and any(not matches_type(item, schema_type) for item in enum):
@@ -298,7 +343,7 @@ def validate_instance(instance: Any, schema: dict[str, Any]) -> list[Violation]:
             for name, child in value.items():
                 if name in properties:
                     walk(child, properties[name], pointer_join(path, name))
-                elif node["additionalProperties"] is False:
+                else:
                     add("additionalProperties", path)
         elif schema_type == "array":
             for keyword, fails in (
@@ -313,11 +358,14 @@ def validate_instance(instance: Any, schema: dict[str, Any]) -> list[Violation]:
             checks = (
                 ("minLength", lambda: len(value) < node["minLength"]),
                 ("maxLength", lambda: len(value) > node["maxLength"]),
-                ("pattern", lambda: re.search(node["pattern"], value) is None),
             )
             for keyword, fails in checks:
                 if keyword in node and fails():
                     add(keyword, path)
+            if "pattern" in node:
+                matcher = AUDITED_PATTERN_MATCHERS.get(node["pattern"])
+                if matcher is None or matcher.search(value) is None:
+                    add("pattern", path)
         elif schema_type in {"integer", "number"}:
             if "minimum" in node and value < node["minimum"]:
                 add("minimum", path)
@@ -386,10 +434,65 @@ def load_canonical_schemas(
                 else:
                     discovered.add(relative)
     for unexpected in sorted(discovered - set(CANONICAL_SCHEMAS)):
-        errors.append(f"contract schemas: unexpected file {unexpected}")
+        errors.append(f"contract schemas: unexpected file {unexpected.as_posix()!r}")
 
+    check_canonical_schema_invariants(contract, schemas, errors)
     check_schema_parity(contract, schemas, errors)
     return schemas
+
+
+def check_canonical_schema_invariants(
+    contract: Path,
+    schemas: dict[Path, dict[str, Any] | None],
+    errors: list[str],
+) -> None:
+    """Pin each canonical file to one unique identity and exact document framing."""
+    loaded: list[tuple[Path, dict[str, Any], str, str]] = []
+    for relative, (expected_id, expected_kind) in CANONICAL_SCHEMA_METADATA.items():
+        schema = schemas.get(contract / relative)
+        if not isinstance(schema, dict):
+            return
+        loaded.append((relative, schema, expected_id, expected_kind))
+
+    actual_ids = [schema["$id"] for _relative, schema, _expected_id, _kind in loaded]
+    if len(set(actual_ids)) != len(actual_ids):
+        errors.append("contract schemas: canonical $id values must be unique")
+
+    for relative, schema, expected_id, expected_kind in loaded:
+        if schema["$id"] != expected_id:
+            errors.append(f"schema {relative}: $id must be {expected_id!r}")
+        required = schema.get("required")
+        properties = schema.get("properties")
+        if (
+            schema.get("type") != "object"
+            or not isinstance(required, list)
+            or not isinstance(properties, dict)
+        ):
+            errors.append(
+                f"schema {relative}: canonical root must be an object with properties and required"
+            )
+            continue
+        if set(properties) != CANONICAL_ROOT_FIELDS[relative]:
+            errors.append(
+                f"schema {relative}: canonical root property names must remain exact"
+            )
+        if set(required) != CANONICAL_REQUIRED_FIELDS[relative]:
+            errors.append(
+                f"schema {relative}: canonical root required fields must remain exact"
+            )
+        for field, expected_const in (("version", "v1"), ("kind", expected_kind)):
+            rule = properties.get(field)
+            if field not in required:
+                errors.append(f"schema {relative}: {field} must be required")
+            if (
+                not isinstance(rule, dict)
+                or rule.get("type") != "string"
+                or rule.get("const") != expected_const
+            ):
+                errors.append(
+                    f"schema {relative}: {field} must have type 'string' "
+                    f"and const {expected_const!r}"
+                )
 
 
 def check_schema_parity(
@@ -425,6 +528,13 @@ def check_schema_parity(
         tuple(nested(schema, "properties", "request_id") for schema in (request, success, failure)),
     )
     require_equal(
+        "request_id and model_alias",
+        (
+            nested(request, "properties", "request_id"),
+            nested(request, "properties", "model_alias"),
+        ),
+    )
+    require_equal(
         "usage",
         (
             nested(success, "properties", "usage"),
@@ -437,7 +547,7 @@ def check_schema_parity(
             nested(
                 request,
                 "properties",
-                "repository_instructions",
+                "instructions",
                 "items",
                 "properties",
                 "source",
@@ -530,6 +640,9 @@ def check_contract(repository_root: Path = ROOT) -> list[str]:
             continue
         try:
             fixture = strict_json(fixture_path)
+        except JSONArtifactError as error:
+            errors.append(f"{label}: fixture {error}")
+            continue
         except JSONDocumentError:
             violations = [Violation("json", "")]
         else:
@@ -564,7 +677,7 @@ def check_contract(repository_root: Path = ROOT) -> list[str]:
                 elif relative != Path("fixtures/cases.json"):
                     discovered.add(relative)
     for orphan in sorted(discovered - fixture_paths):
-        errors.append(f"contract fixtures: orphaned file {orphan}")
+        errors.append(f"contract fixtures: orphaned file {orphan.as_posix()!r}")
     for relative, outcomes in coverage.items():
         if True not in outcomes:
             errors.append(f"contract cases: {relative} requires at least one valid fixture")

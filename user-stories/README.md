@@ -48,13 +48,13 @@ one only by adding a reviewed story and lesson after its dependency evidence exi
 
 | ID | Outcome slice | Depends on |
 | --- | --- | --- |
-| ICGT-009 | Expose one fake-backed non-streaming FastGate model-turn request | ICGT-008 |
-| ICGT-010 | Normalize request and upstream failures at the transport boundary | ICGT-009 |
+| ICGT-009 | Admit and execute one fake-backed model turn without HTTP binding | ICGT-008 |
+| ICGT-010 | Expose one loopback-only fake-backed model turn and map every admitted provider outcome | ICGT-009 |
 | ICGT-011 | Define and test the FastGate-owned model-turn SSE grammar | ICGT-010 |
 | ICGT-012 | Extend the fake with deterministic stream gates and cancellation | ICGT-011 |
 | ICGT-013 | Stream deterministic fake output through the endpoint | ICGT-012 |
 | ICGT-014 | Propagate client cancellation | ICGT-013 |
-| ICGT-015 | Enforce an upstream deadline and cleanup grace | ICGT-014 |
+| ICGT-015 | Enforce an upstream deadline, cleanup grace, and bounded FastGate-local reaping | ICGT-014 |
 | ICGT-016 | Bound slow-client backpressure | ICGT-015 |
 | ICGT-017 | Record low-cardinality latency and usage metrics | ICGT-016 |
 | ICGT-018 | Add the opt-in OpenAI upstream adapter | ICGT-017 |
@@ -63,13 +63,41 @@ one only by adding a reviewed story and lesson after its dependency evidence exi
 | ICGT-021 | Publish FastGate v1 conformance artifacts and client integration guidance | ICGT-020 |
 | ICGT-022 | Add the first limited Groq upstream path | ICGT-019 |
 
+Before promotion, ICGT-009 must own the complete body and semantic admission boundary: an exact raw
+body cap; the v1 strict JSON and schema profile; a bounded response when no safe `request_id` can be
+recovered; one reviewed fake model alias and unknown-alias rejection; and the v1
+`unsupported_capability` envelope for schema-valid `tool_calls`. That capability failure echoes the
+admitted ID, uses a fixed safe message with `retryable: false` and no usage, validates against the
+failure schema, and proves the fake was called zero times. ICGT-009 does not bind
+the public inference route or map a provider outcome to wire transport. An admitted request invokes
+the fake exactly once and returns its provider-neutral outcome unchanged for ICGT-010.
+
+ICGT-010 binds the first loopback-only, fake-backed route, defines method/media-type behavior, and
+exhaustively maps both completed and normalized failed provider outcomes, including optional failure
+usage. It owns HTTP status mapping for admission and provider outcomes, repeats the `tool_calls`
+ordering test against the fake, and must observe zero calls. It may
+not ignore a valid provider failure. It must also reject wrong method/media type with zero fake calls
+and prevent the inference route from starting on a non-loopback listener. Caller authentication
+remains unimplemented, so the route is not an externally deployable client surface. The first
+ICGT-020/021 handoff stays loopback-only and unauthenticated; it does not advertise an unimplemented
+authentication scheme. A later reviewed FastGate auth implementation and profile must precede
+non-loopback use. Later capability work owns discovery, support, emulation, and routing—not
+ICGT-009's mandatory v1 rejection.
+
+ICGT-015 owns only FastGate-local upstream goroutine/stream reaping after its bounded cleanup grace.
+Completion is local cleanup evidence, never proof that a remote provider stopped work or billing.
+
 ICGT-019 uses a repository-owned measurement client to compare the same bounded workload directly
 and through FastGate; it does not depend on a harness adapter or claim coding-task parity. ICGT-020
 pins the then-current immutable harness provider contract and exact FastGate schema/fixture source
-artifacts, then defines a joint handoff with server and client ownership separated. ICGT-021 remains
+artifacts, then defines a candidate joint handoff with server and client ownership separated.
+ICGT-021 remains
 FastGate-owned: it packages and validates those exact artifacts, records their manifest/digest, and
 cannot alter semantics without a new version. A later Code Assist Harness story implements
 `FastGateProvider`, accepts the client side of the profile, and precedes any coding-task parity claim.
+ICGT-020 must re-audit the then-current harness provider contract rather than assume the ICGT-006
+snapshot is adapter-ready. The first profile is no-tool only; full coding-agent parity requires a
+separately reviewed, versioned FastGate tool extension and matching CAH contract.
 
 See [the outcome backlog](backlog.md) for LatencyLab, operator, TenantPlane, and FleetSim milestones.
 

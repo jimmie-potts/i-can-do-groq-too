@@ -9,6 +9,6 @@
       "content": "Reject identifiers above the public bound."
     }
   ],
-  "repository_instructions": [],
+  "instructions": [],
   "required_capabilities": []
 }

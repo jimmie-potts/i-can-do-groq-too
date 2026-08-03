@@ -36,8 +36,13 @@ Reviewed M1 unit sequence:
   fake; and
 - ICGT-008 build the basic non-streaming deterministic fake upstream.
 
-Later units split model-turn endpoint mapping, normalized transport failures, FastGate-owned stream
+Later units split admission/provider-neutral execution, endpoint/outcome mapping, FastGate-owned stream
 grammar, and deterministic concurrency/cancellation behavior so each review has one primary concept.
+ICGT-009 owns the raw-body cap, strict decode/schema admission, safe no-ID response, fixed fake alias,
+and declared `tool_calls` rejection with zero-dispatch evidence, then returns one admitted fake
+outcome without transport mapping. ICGT-010 binds the first loopback-only endpoint and exhaustively
+maps completed and failed provider outcomes. Its start conditions must reject non-loopback inference
+binding, and wrong method/media-type paths must prove zero fake calls.
 
 ### M2 - Streaming reliability
 
@@ -45,8 +50,8 @@ grammar, and deterministic concurrency/cancellation behavior so each review has 
 backpressure, structured failures, cleanup, and observable latency.
 
 Expected small units include SSE framing, fake streaming, client cancellation, upstream deadline,
-slow-client bounds, and basic metrics. Each becomes implementation-ready only when the previous
-contract is observed in code.
+bounded FastGate-local reaping after cleanup grace, slow-client bounds, and basic metrics. Each
+becomes implementation-ready only when the previous contract is observed in code.
 
 The asynchronous provider-operation, cancellation, and cleanup-barrier contract is introduced only
 when the stream grammar can exercise it. Concrete provider-SDK dependency enforcement waits for the
@@ -67,18 +72,20 @@ The handoff sequence is intentionally explicit:
    cancellation behavior, and gateway overhead using a repository-owned measurement client against
    the same bounded workload. It does not depend on a harness adapter or claim coding-task
    correctness parity.
-2. ICGT-020 starts only after ICGT-019 and an adapter-ready harness contract snapshot. Under the
-   current harness roadmap, that means CAH-021 through CAH-023 are complete. The handoff pins an
-   immutable harness revision/provider contract plus the exact FastGate schema/fixture versions and
-   source artifacts.
-3. ICGT-020 defines a joint profile: FastGate guarantees its server contract; Code Assist Harness
-   later accepts and owns trusted endpoint/authentication, TLS, proxy, redirect, mapping,
-   failure/retry, cancellation, and local-cleanup policy for its adapter.
+2. ICGT-020 starts only after ICGT-019 and a newly audited adapter-ready harness contract snapshot.
+   The handoff pins that immutable harness revision/provider contract plus the exact FastGate
+   schema/fixture versions and source artifacts; it does not assume the historical ICGT-006 snapshot
+   is still sufficient.
+3. ICGT-020 defines a candidate loopback-only, unauthenticated, no-tool profile: FastGate guarantees
+   its implemented server contract; Code Assist Harness later accepts and owns endpoint, mapping,
+   failure/retry, cancellation, and local-cleanup policy for its adapter. A non-loopback profile waits
+   for a separately implemented and conformance-tested FastGate authentication/TLS story.
 4. ICGT-021 packages and validates the exact frozen artifacts, records the bundle manifest/digest,
    and may not change semantics without a new contract version and handoff review.
 5. A later Code Assist Harness story owns `FastGateProvider`, pins that manifest/digest, and accepts
-   the client side of the joint profile. Coding-task parity evaluation begins only after that
-   adapter exists, with the harness remaining correctness authority.
+   the client side of the joint no-tool profile. Full coding-agent parity additionally requires a
+   separately reviewed, versioned FastGate tool extension and compatible harness contract, with the
+   harness remaining correctness authority.
 
 ### M4 - LatencyLab
 

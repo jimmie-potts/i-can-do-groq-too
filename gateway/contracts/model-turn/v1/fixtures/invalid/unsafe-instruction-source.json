@@ -9,7 +9,7 @@
       "content": "Reject unsafe labels."
     }
   ],
-  "repository_instructions": [
+  "instructions": [
     {
       "source": "AGENTS.md\n",
       "content": "Keep labels control-safe."

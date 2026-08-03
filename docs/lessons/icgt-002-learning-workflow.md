@@ -10,8 +10,8 @@
 - **Related architecture:** [Root agent guidelines](../../AGENTS.md) and
   [story guidelines](../../user-stories/AGENTS.md)
 
-> This lesson describes an implemented documentation workflow. It does not claim that FastGate code
-> or a visual lesson deck exists.
+> This lesson describes an implemented documentation workflow. ICGT-002 itself implemented no
+> FastGate code or visual companion.
 
 ## Quick summary
 
@@ -111,10 +111,13 @@ the guidelines, story template, lesson template, and initial one-to-one mappings
 
 The workflow adapts the strong one-story/one-lesson pattern from Code Assist Harness. ICGT-002
 originally required visual companions for high-priority completed units, and ICGT-005 later produced
-and verified the first such deck. The current learning policy keeps exactly one source-backed
-Markdown lesson mandatory while making visuals optional: create one only when the user explicitly
+and verified the first such deck. During ICGT-006 the user approved a policy amendment: the
+[governing story](../../user-stories/icgt-002-establish-learning-standard.md),
+[root guidance](../../AGENTS.md), and [lesson guidance](AGENTS.md) now keep exactly one source-backed
+Markdown lesson mandatory while making visuals optional. Create one only when the user explicitly
 requests it or a separately reviewed justification shows that it materially improves understanding.
-The ICGT-005 deck remains historical evidence for that completed unit.
+The ICGT-005 deck remains historical evidence for that completed unit, not precedent that later High
+units require one.
 
 ## Production expansion
 

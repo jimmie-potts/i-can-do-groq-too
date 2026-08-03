@@ -28,8 +28,21 @@ its scalar while a lone surrogate is rejected. Numbers are compared by their exa
 value: booleans are not integers, an integral decimal such as `1.0` is an integer, and a fractional
 decimal remains fractional even near a large bound.
 
-The checker's one-megabyte per-file read limit protects the offline repository gate. It is not part
-of model-turn v1 and is not the future HTTP request-body limit.
+The checker's one-megabyte per-file read limit, 128-level decoded nesting limit, and exact-decimal
+implementation range protect the offline repository gate. They are artifact guards, not model-turn
+v1 rules or future HTTP admission limits. A syntactically valid document refused by any guard cannot
+count as a normative `json` fixture failure.
+
+The offline checker also pins each canonical file to its exact unique schema ID, exact root property
+and required-field sets, exact `version` and `kind`, closed-object policy, and deliberately duplicated
+identifier rules. It executes only the two committed, precompiled schema `pattern` expressions for
+identifiers and control-safe strings. That exact audited allowlist prevents the Python checker from
+accepting a pattern that a language-neutral JSON Schema consumer may interpret differently; adding
+another pattern requires an explicit portability review and checker change.
+
+The checker profile also caps a schema `enum` at 64 entries before comparing entries for uniqueness.
+That bounds offline review work; it constrains repository schema artifacts, not values in a
+model-turn document.
 
 ## Why this is a FastGate-owned contract
 
@@ -57,7 +70,7 @@ A `model_turn.request` contains:
 - `model_alias`: a FastGate-owned logical model name with the same lexical bound as `request_id`;
 - `conversation`: 1 through 64 ordered `user` or `assistant` messages, each with 1 through 65,536
   Unicode code points of content;
-- `repository_instructions`: 0 through 32 ordered `{source, content}` objects. A source contains 1
+- `instructions`: 0 through 32 ordered `{source, content}` objects. A source contains 1
   through 256 code points and no C0/C1 control, DEL, U+2028, or U+2029 character. Content contains 1
   through 65,536 code points; and
 - `required_capabilities`: 0 or 1 declared capabilities. The only v1 spelling is `tool_calls`.
@@ -69,25 +82,30 @@ an additional transport-admission rule. It must state honestly when a shape-conf
 can still be rejected by that cap; the validator's fixture-file limit must not become the endpoint
 limit accidentally.
 
-Array order is semantic. FastGate does not discover repository instructions or reinterpret their
-precedence. `model_alias` is not a provider model ID, and a future routing layer may map it only
-through reviewed configuration.
+Array order is semantic. `instructions` are generic caller-supplied instruction blocks kept separate
+from conversation; `source` is an opaque provenance label, not necessarily a file or path. FastGate
+does not discover instructions, apply client-specific precedence, or reinterpret their order.
+`model_alias` is not a provider model ID, and a future routing layer may map it only through reviewed
+configuration.
 
 `request_id` is correlation, not an idempotency key. Reusing it does not authorize deduplication,
 safe retry, replay, or reuse of a billable result.
 
-The body has no credential field. Authentication is an out-of-body transport concern reserved for a
-later endpoint story. The non-normative placeholder is `Authorization: Bearer <credential>`; it shows
-where authentication belongs without selecting a token format or implemented header contract. The
-later story must define the trusted FastGate endpoint and authentication mechanism before a client
-adapter can claim authenticated operation.
+The body has no credential field. Caller authentication is an out-of-body transport concern reserved
+for a later non-loopback authentication profile and implementation story. The non-normative
+placeholder is `Authorization: Bearer <credential>`; it shows where authentication belongs without
+selecting a token format or implemented header contract. ICGT-010's first endpoint remains
+loopback-only, must refuse inference-route startup on a non-loopback listener, and cannot claim
+authenticated operation.
 
 ### Capability admission
 
 `["tool_calls"]` is deliberately schema-valid so a client can state a requirement rather than hide
 it in prompt text. Model-turn v1 has no tool definitions or tool result shape. The later runtime must
 therefore reject that declared requirement **before provider dispatch** with
-`unsupported_capability`.
+`unsupported_capability`. ICGT-009 owns that pre-dispatch admission rule and proves the fake is not
+invoked; ICGT-010 repeats the integration test at the HTTP boundary and must observe zero provider
+calls.
 
 That is different from an upstream provider unexpectedly producing tool output after dispatch. A
 later adapter must fail closed with `unsupported_upstream_output`; it must not label paid,
@@ -96,7 +114,9 @@ post-dispatch work as a preflight rejection and must not copy raw tool arguments
 ## Completed result
 
 A `model_turn.completed` document returns the same `request_id` and one non-empty `output_text`
-bounded to 65,536 Unicode code points. It may include one strict `usage` object containing
+bounded to 65,536 Unicode code points. This provider-neutral transport text is not constrained by a
+specific client's terminal policy; a client may reject a shape-valid value under a stricter local
+safety rule. It may include one strict `usage` object containing
 non-negative `input_tokens` and `output_tokens`, each no larger than 9,007,199,254,740,991.
 
 The schema checks the identifier's shape, not equality across two separate documents. The later
@@ -120,6 +140,8 @@ A `model_turn.failed` document returns the same `request_id` and one strict erro
 It may also carry the same strict `usage` object as a completed result. This preserves bounded,
 non-authoritative token evidence when an upstream reports usage before a later failure. A
 pre-dispatch rejection normally has no usage because no provider work should have started.
+ICGT-007 must preserve optional failure-side usage in the provider-neutral failed outcome, and
+ICGT-010 later owns mapping that observation into this wire envelope.
 
 The error codes have these v1 meanings:
 
@@ -135,17 +157,21 @@ The error codes have these v1 meanings:
 | `unsupported_upstream_output` | After dispatch, the upstream produced a valid semantic output that model-turn v1 cannot represent. |
 | `internal_error` | FastGate failed unexpectedly and exposes no internal or provider details. |
 
-ICGT-010 owns runtime status mapping and when each code may be marked retryable. The schema validates
-the normalized envelope but does not prove that a future runtime chose the truthful code or flag.
+ICGT-009 owns the fixed `unsupported_capability` message and `retryable: false` admission outcome.
+ICGT-010 owns HTTP status mapping for every admission and provider outcome, plus retryability mapping
+for the remaining codes. The schema validates the normalized envelope but does not prove that a
+future runtime chose the truthful code or flag.
 
 Provider exceptions, response bodies, headers, credentials, raw tool arguments, and unbounded text
 do not belong in this shape. Usage remains observation rather than billing proof or retry authority,
 including when it accompanies a failure.
 
 This failed-result shape assumes FastGate has already parsed and admitted a valid `request_id` that
-it can echo. ICGT-009 and ICGT-010 must define the bounded transport response for malformed,
-unauthenticated, or otherwise rejected input when no safe request identifier is available. This
-schema does not pretend to solve that HTTP-layer correlation problem.
+it can echo. ICGT-009 owns the bounded transport response for malformed or otherwise rejected input
+when no safe identifier is available. Caller authentication is outside this envelope and remains
+unimplemented through ICGT-010; `authentication_failed` means upstream authentication only. The first
+ICGT-020/021 handoff remains loopback-only and unauthenticated. A separate FastGate
+authentication/TLS implementation and reviewed profile must precede non-loopback use.
 
 ## Versioning rule
 

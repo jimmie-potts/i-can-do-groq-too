@@ -9,7 +9,7 @@
       "content": "Reject capabilities outside v1."
     }
   ],
-  "repository_instructions": [],
+  "instructions": [],
   "required_capabilities": [
     "image_input"
   ]

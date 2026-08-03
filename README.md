@@ -14,7 +14,7 @@ The repository foundation, Go toolchain decision,
 [ICGT-006 model-turn v1 contract](user-stories/icgt-006-select-fastgate-api.md) are implemented. The
 root Go module contains one standard-library-only executable that serves operational health and
 shuts down cleanly. FastGate now also owns strict language-neutral request, result, and failure
-schemas; a harness mapping; 24 fixtures; and a dependency-free offline contract validator.
+schemas; a harness mapping; 26 fixtures; and a dependency-free offline contract validator.
 
 [ICGT-007](user-stories/icgt-007-define-provider-contracts.md) is next in dependency order. No
 inference request endpoint, provider contract or adapter, database, Kubernetes controller, or
@@ -87,7 +87,8 @@ For each unit:
 3. Predict the important types, state, failure behavior, and tests.
 4. Implement one bounded behavior.
 5. Review the diff personally, with special attention to the story's review checkpoint.
-6. Run a separate correctness review and the complete repository gate.
+6. Apply the [PR review regression checklist](docs/pr-review-checklist.md), run a separate
+   correctness review, and run the complete repository gate.
 7. Replace planned lesson material with exact repository-backed code samples and a teach-back.
 
 The [user-story index](user-stories/README.md) contains the dependency order. The

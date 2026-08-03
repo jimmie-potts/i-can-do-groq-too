@@ -17,7 +17,7 @@
       "content": "Now summarize it."
     }
   ],
-  "repository_instructions": [
+  "instructions": [
     {
       "source": "AGENTS.md",
       "content": "Keep workflow orchestration outside FastGate."

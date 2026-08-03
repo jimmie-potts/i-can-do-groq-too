@@ -46,7 +46,9 @@ After implementation:
 1. Summarize the important control flow and ownership decisions.
 2. Identify the small set of production and test files the user should review personally.
 3. Run focused tests and `./scripts/check`.
-4. Run a separate review focused on correctness, concurrency, cleanup, security, and missing tests.
+4. Read and apply `docs/pr-review-checklist.md`, then run a separate review focused on correctness,
+   concurrency, cleanup, security, and missing tests. Add a concise evidence-backed checklist entry
+   when review exposes a reusable missed-case class.
 5. Update the linked lesson with exact source-backed examples, observed trade-offs, validation, and
    three teach-back questions.
 

@@ -59,6 +59,7 @@ REQUIRED_PATHS = (
     "model-operator/README.md",
     "docs/project-brief.md",
     "docs/architecture.md",
+    "docs/pr-review-checklist.md",
     "docs/roadmap.md",
     "docs/troubleshooting.md",
     "docs/adr/README.md",

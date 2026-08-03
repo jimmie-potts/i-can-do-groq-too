@@ -10,6 +10,6 @@
       "content": "Reject ambiguous object keys."
     }
   ],
-  "repository_instructions": [],
+  "instructions": [],
   "required_capabilities": []
 }

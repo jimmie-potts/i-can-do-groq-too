@@ -9,6 +9,6 @@
       "content": "Reject a control character at the identifier boundary."
     }
   ],
-  "repository_instructions": [],
+  "instructions": [],
   "required_capabilities": []
 }

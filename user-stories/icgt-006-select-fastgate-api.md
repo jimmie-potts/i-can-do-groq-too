@@ -20,7 +20,8 @@
   requirement without making the harness the only client.
 - Produce a field-by-field mapping from the current harness request, operation, and event contract
   to the selected FastGate contract, with rejected-option gaps retained as decision evidence.
-- Define the smallest non-streaming v1 request/result/error contract and versioning rule.
+- Define the smallest client-neutral non-streaming v1 request/result/error contract and versioning
+  rule, including generic ordered instruction blocks without importing CAH-specific field names.
 - Describe how later streaming, tool calls, capabilities, cancellation, and terminal cleanup extend
   or constrain the choice.
 - Define a canonical, language-neutral FastGate non-streaming schema and valid/invalid fixture
@@ -40,11 +41,14 @@
    Responses compatibility or expose either as a v1 alias.
 3. A versioned client contract defines required/optional fields, bounds, authentication placeholder,
    model alias, normalized errors, request correlation, and unknown-field behavior.
-4. The mapping covers ordered conversation roles/content; ordered repository-instruction
-   source/content; text observations; provider-emitted tool-call requests; optional usage;
+4. The mapping covers ordered conversation roles/content; CAH repository guidance translated into
+   generic ordered instruction-block source/content; text observations; provider-emitted tool-call
+   requests; optional usage;
    normalized failure code, bounded control-safe message, and retryability; completed/failed
-   terminal behavior; cancellation; no-later-event behavior after terminal/local cancellation;
-   repeatable local cleanup confirmation; and confirmed versus unconfirmed upstream cleanup.
+   terminal behavior; lazy operation start; single-consumer event claim; cancellation and its
+   `cancelled`/`already_closed` outcomes; no-later-event behavior after terminal/local cancellation;
+   repeatable local cleanup confirmation; idempotent forced local task reaping; and confirmed versus
+   unconfirmed upstream cleanup.
 5. Every mapped semantic is marked exact, lossy, explicitly unsupported, or deferred to a named
    versioned extension and owning story. Required semantic loss blocks ICGT-006 completion until the
    contract preserves it or a reviewed ADR amendment or supersession changes the decision.
@@ -72,8 +76,8 @@
   through the [request schema](../gateway/contracts/model-turn/v1/schema/request.schema.json) and
   [offline validator](../scripts/check_contract.py). There is no service request path in this unit.
 - **Failure/test path:** Trace the [unknown-field fixture](../gateway/contracts/model-turn/v1/fixtures/invalid/unknown-request-field.json)
-  through its exact manifest expectation and the intended-rule mismatch test in
-  [the checker suite](../tests/test_check_contract.py).
+  through its manifest expectation, then personally review the canonical-root mutation and
+  artifact-guard-versus-`json` regressions in [the checker suite](../tests/test_check_contract.py).
 - **Invariant:** FastGate's internal provider seam is downstream of a reviewed client contract.
 - **Deferred:** Go provider types, fake upstream, HTTP handler, SSE implementation, and adapters.
 

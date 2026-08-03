@@ -11,7 +11,7 @@
     "request_id",
     "model_alias",
     "conversation",
-    "repository_instructions",
+    "instructions",
     "required_capabilities"
   ],
   "properties": {
@@ -62,7 +62,7 @@
         }
       }
     },
-    "repository_instructions": {
+    "instructions": {
       "type": "array",
       "minItems": 0,
       "maxItems": 32,

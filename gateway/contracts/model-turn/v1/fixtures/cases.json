@@ -23,6 +23,13 @@
       "meaning": "Both opaque identifier fields accept exactly 128 permitted ASCII characters."
     },
     {
+      "name": "request-escaped-surrogate-pair",
+      "schema": "schema/request.schema.json",
+      "fixture": "fixtures/valid/request-escaped-surrogate-pair.json",
+      "valid": true,
+      "meaning": "A valid escaped UTF-16 surrogate pair decodes to one Unicode scalar value."
+    },
+    {
       "name": "minimal-completed-result",
       "schema": "schema/success.schema.json",
       "fixture": "fixtures/valid/minimal-completed.json",
@@ -127,7 +134,7 @@
       "valid": false,
       "expected": {
         "keyword": "pattern",
-        "instance_path": "/repository_instructions/0/source"
+        "instance_path": "/instructions/0/source"
       }
     },
     {
@@ -164,6 +171,16 @@
       "name": "boolean-usage",
       "schema": "schema/success.schema.json",
       "fixture": "fixtures/invalid/boolean-usage.json",
+      "valid": false,
+      "expected": {
+        "keyword": "type",
+        "instance_path": "/usage/input_tokens"
+      }
+    },
+    {
+      "name": "fractional-usage-near-safe-integer-limit",
+      "schema": "schema/success.schema.json",
+      "fixture": "fixtures/invalid/fractional-usage.json",
       "valid": false,
       "expected": {
         "keyword": "type",

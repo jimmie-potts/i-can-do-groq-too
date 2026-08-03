@@ -9,6 +9,6 @@
       "content": "Explain one model turn."
     }
   ],
-  "repository_instructions": [],
+  "instructions": [],
   "required_capabilities": []
 }

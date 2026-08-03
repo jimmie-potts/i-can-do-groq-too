@@ -19,7 +19,7 @@
 ## Quick summary
 
 ICGT-006 turns ADR 0003's Option C into the first concrete FastGate client contract. It commits
-three strict JSON schemas, 24 language-neutral examples, a field-by-field Code Assist Harness
+three strict JSON schemas, 26 language-neutral examples, a field-by-field Code Assist Harness
 mapping, and a dependency-free Python checker that runs in `./scripts/check`.
 
 The key design lesson is sequencing: decide the client-visible meaning first, then make the later
@@ -87,6 +87,7 @@ The important invariants are:
 | [Case manifest](../../gateway/contracts/model-turn/v1/fixtures/cases.json), [minimal request](../../gateway/contracts/model-turn/v1/fixtures/valid/minimal-request.json), and [unknown-field failure](../../gateway/contracts/model-turn/v1/fixtures/invalid/unknown-request-field.json) | Make the contract language-neutral and personally inspectable | Does each invalid case name its intended rule and location? |
 | [Offline checker](../../scripts/check_contract.py) | Owns strict loading, the closed keyword profile, path safety, and complete corpus execution | Can a malformed schema, duplicate fixture, symlink, orphan, or rounded token count escape? |
 | [Checker tests](../../tests/test_check_contract.py) | Exercise success, failure, exact numbers, diagnostics, and manifest integrity | Do failures remain deterministic and content-free? |
+| [PR review regression checklist](../pr-review-checklist.md) | Preserves missed invariant classes found after the first review | Which schema claims need a mutation test rather than another happy-path fixture? |
 
 Personally review the request and failure schemas, the two capability-related valid fixtures, the
 `check_contract` control flow, and the intended-rule mismatch test. No generated code or dependency
@@ -108,7 +109,7 @@ seven request fields and closes the top-level object:
     "request_id",
     "model_alias",
     "conversation",
-    "repository_instructions",
+    "instructions",
     "required_capabilities"
   ],
   "properties": {
@@ -139,7 +140,7 @@ keeps even empty instruction and capability arrays explicit:
       "content": "Explain one model turn."
     }
   ],
-  "repository_instructions": [],
+  "instructions": [],
   "required_capabilities": []
 }
 ```
@@ -171,9 +172,10 @@ because of some other accidental defect, the checker reports an intended-rule mi
 
 ### 4. Strict loading happens before schema validation
 
-The [checker](../../scripts/check_contract.py) loads each repository artifact with a one-megabyte
-safety limit, requires UTF-8, rejects duplicate object keys, rejects JSON's non-standard `NaN` and
-`Infinity` spellings, rejects decoded lone surrogates, and parses all numbers exactly:
+The [checker](../../scripts/check_contract.py) loads each repository artifact with one-megabyte,
+128-level nesting, and exact-decimal implementation guards; requires UTF-8; rejects duplicate object
+keys and JSON's non-standard `NaN`/`Infinity` spellings; rejects decoded lone surrogates; and parses
+all numbers exactly:
 
 ```python
 document = json.loads(
@@ -188,12 +190,53 @@ Exact decimal parsing matters near the token bound. Binary floating-point could 
 `9007199254740990.5` into an integer-looking value. `Decimal` preserves the fraction, so the
 schema's `integer` rule rejects it. A very large but syntactically valid number such as `1e999`
 stays a number and then fails the applicable `maximum`; it is not mislabeled as malformed JSON.
+The size, nesting, and numeric implementation-range guards protect this repository checker only. A
+refusal at any guard is an artifact error, not a normative claim that the source document is
+malformed JSON.
 
 The checker next rejects any schema keyword outside its explicit profile. This prevents a future
 author from adding `$ref`, `oneOf`, or another unsupported rule that the local validator would
-otherwise ignore.
+otherwise ignore. The profile caps enum lists at 64 entries before its pairwise uniqueness check, so
+a repository-controlled schema cannot turn the offline gate into unbounded quadratic work.
 
-### 5. Every fixture must be accounted for
+### 5. Mutation tests protect rules that examples cannot
+
+A valid fixture containing `"version": "v1"` proves that v1 is accepted. By itself, it does not
+prove the field remains required, that `v2` is rejected, or that the file keeps the right schema ID.
+The checker therefore pins canonical metadata separately from instance validation:
+
+```python
+CANONICAL_SCHEMA_METADATA = {
+    REQUEST_SCHEMA: ("urn:fastgate:model-turn:v1:request", "model_turn.request"),
+    SUCCESS_SCHEMA: ("urn:fastgate:model-turn:v1:success", "model_turn.completed"),
+    FAILURE_SCHEMA: ("urn:fastgate:model-turn:v1:failure", "model_turn.failed"),
+}
+```
+
+The schema profile also enforces closed nested objects and refuses to compile arbitrary patterns:
+
+```python
+if node.get("additionalProperties") is not False:
+    add(path, "object schemas require additionalProperties to be false")
+
+if node["pattern"] not in AUDITED_PATTERN_MATCHERS:
+    add(path, "pattern must be an audited language-neutral expression")
+```
+
+The exact allowlist contains only the identifier and control-safe single-line schema `pattern`
+expressions used by model-turn v1. It is intentionally narrower than either Python or general
+ECMAScript regex support.
+That prevents Python-only syntax from receiving a false language-neutral approval and makes every
+future pattern addition a visible review decision. The current expressions use `(?![\\s\\S])` as a
+true end check because `$` may match before a trailing newline.
+
+The focused tests mutate one invariant at a time while keeping existing fixture values usable. They
+prove the gate rejects mistyped, wrong-version, and duplicate IDs; broadened or optional framing;
+removed or added canonical root fields; root and nested open objects; Python-only named groups; and a
+`model_alias` bound that drifts from `request_id`. The reusable questions are recorded in the
+[PR review checklist](../pr-review-checklist.md) so later reviews start with this evidence.
+
+### 6. Every fixture must be accounted for
 
 `check_contract` safely resolves each manifest path under either `schema/`,
 `fixtures/valid/`, or `fixtures/invalid/`. It rejects absolute paths, `..`, aliases such as
@@ -223,6 +266,11 @@ A valid case must have no violations. An invalid case must have at least one vio
 include its intended one. Additional failures are allowed because one malformed document can
 violate several independent rules.
 
+Artifact failures are different. If a fixture is unreadable or exceeds the checker's local size
+guard, no protocol document was parsed, so that operational refusal cannot satisfy an expected
+`json` violation. `JSONArtifactError` takes a separate path and the focused suite writes an
+oversized but valid request to prove it remains a checker error.
+
 The meaningful failure test changes the expected keyword without changing the invalid fixture:
 
 ```python
@@ -239,7 +287,7 @@ self.assertTrue(any("intended rule mismatch" in error for error in errors), erro
 
 That test proves the checker does not merely celebrate any rejection.
 
-### 6. Capability timing changes the meaning of failure
+### 7. Capability timing changes the meaning of failure
 
 The schema accepts `required_capabilities: ["tool_calls"]` even though v1 has no tool schema. This
 lets a future server reject the request honestly with `unsupported_capability` before starting
@@ -253,15 +301,20 @@ has no usage; the
 [post-dispatch fixture](../../gateway/contracts/model-turn/v1/fixtures/valid/failed-unsupported-upstream-output.json)
 shows bounded usage.
 
-That failure-side usage is exact on the FastGate wire but deferred for the current harness mapping.
-The harness accepts usage before failure only after text deltas and matching completed text, while
-the non-streaming FastGate failure carries no observed text. A future adapter must neither drop the
-usage silently nor invent text; ICGT-011's `model-turn-stream/v1` profile owns the exact sequence.
+That failure-side usage is exact on the FastGate wire but has two different harness mappings. Usage
+on a no-text failure is lossy and currently unrepresentable because CAH accepts usage only after text
+deltas and matching completed text. A future adapter must neither drop the usage silently nor invent
+text; ICGT-020 must explicitly accept the loss or require a later CAH contract change. Only usage
+after real observed text is deferred to ICGT-011's `model-turn-stream/v1` sequence.
 
 The [harness mapping](../../gateway/contracts/model-turn/v1/harness-mapping.md) keeps the current
-direct OpenAI adapter separate. It maps only what a future CAH-owned `FastGateProvider` would need
-and names later owners for streaming, cancellation, cleanup, authentication, and the cross-repo
-handoff.
+direct OpenAI adapter separate and pins the reviewed harness evidence at
+`ce76b4f9a3be5ea49f252616db0ced6ec4e8cdd7`. It maps only what a future CAH-owned
+`FastGateProvider` would need and names later owners for streaming, cancellation, ordinary cleanup,
+forced local task reaping, authentication, and the cross-repo handoff. FastGate's generic output
+text remains broader than CAH's terminal-text policy because CAH is one client; the future adapter
+must reject a disallowed whole response as fixed safe `invalid_response`, never sanitize, truncate,
+emit, or log it.
 
 ## Why Option C remains the choice
 
@@ -285,30 +338,71 @@ than weakening validation.
 Adversarial review then found that the harness may observe usage before a failed terminal. The first
 failure schema would have lost that evidence, so failure results now allow the same optional bounded
 usage object as completed results. The review also forced the contract to state that its required
-`request_id` failure envelope begins only after a valid identifier can be recovered; ICGT-009 and
-ICGT-010 own malformed or unauthenticated transport responses with no safe client identifier.
+`request_id` failure envelope begins only after a valid identifier can be recovered; ICGT-009 owns a
+separate bounded transport rejection when no safe client identifier exists. Caller authentication
+remains a later profile, and `authentication_failed` means upstream authentication only.
 
 The numeric checker initially used binary floats. Review demonstrated a fractional count near the
 JavaScript-safe integer limit could be rounded into a false integer. The final checker uses
 standard-library `Decimal`, and focused tests preserve both integer and maximum semantics.
 
 The completed contract review also made the parse profile normative, added duplicate-key and lone-
-surrogate fixtures, and separated the checker's one-megabyte artifact guard from ICGT-009's future
-raw HTTP-body bound. It named the `model-turn-stream/v1` extension convention so later stream,
-cancellation, and cleanup fixtures cannot silently change the base model-turn v1 meaning.
+surrogate fixtures, and separated the checker's size, nesting, and exact-number implementation guards
+from ICGT-009's future raw HTTP-body bound. It named the `model-turn-stream/v1` extension convention
+so later stream, cancellation, and cleanup fixtures cannot silently change the base model-turn v1
+meaning.
+
+The pull-request review then found five invariants that valid fixtures did not lock by themselves:
+canonical IDs, exact document framing, recursively closed objects, language-neutral pattern syntax,
+and `model_alias`/`request_id` parity. The gate now checks those rules directly, and mutation tests
+prove each failure. The lesson is not merely “add more fixtures”; it is to distinguish an example of
+today's value from executable protection against tomorrow's schema drift.
+
+An independent review of the fix found that the new framing check initially assumed every retained
+canonical schema was an object. A profile-valid string root could therefore raise `KeyError`. The
+checker now validates that structural assumption and returns a bounded error, with a mutation test
+that proves the failure stays contained.
+
+A second review wave challenged the boundaries around that validator. Local file-size, nesting, or
+exact-decimal range failures could otherwise be mistaken for normative malformed JSON; artifact
+failures now have their own error path and bounded diagnostics. Diagnostic paths escape control
+characters, and enum uniqueness work is capped. Exact fractional usage and a valid escaped surrogate pair
+moved into the shared corpus instead of living only in Python tests, and a regression preserves the
+pair's source escape spelling. An independent Draft 2020-12 validator matches
+all 23 schema-governed cases when fed exact decimals; its default binary-float parse misclassifies
+the fractional value after rounding. That contrast is concrete evidence that consumers must
+implement the contract's exact-number parse rule as well as its schema.
+
+The same wave found architecture gaps. The CAH-specific `repository_instructions` public name became
+generic ordered `instructions`, while the mapping still preserves CAH provenance, order, and content.
+The harness snapshot was refreshed and the full operation lifecycle added lazy start,
+single-consumer event claim, cancellation result distinctions, and `force_cancel_cleanup()`. The
+result mapping now records terminal-text narrowing and no-text failure usage as real losses instead
+of changing the generic FastGate contract or inventing observations.
+Planned ICGT-007 now preserves optional failure usage. ICGT-009 owns complete admission and one
+provider-neutral fake execution, including schema-valid `tool_calls` rejection with a zero-call test;
+ICGT-010 owns the first loopback-only endpoint and exhaustive wire outcome mapping.
 
 No visual companion was created. The project policy now treats the Markdown lesson as the required
-learning artifact and visuals as optional.
+learning artifact and visuals as optional. The governing ICGT-002 story was amended too, so the
+current rule does not conflict with an older Done acceptance criterion.
 
 ## Failure scenarios to study
 
 - An unknown request field is silently ignored before a paid operation.
 - A valid fixture passes only because its schema used an unsupported keyword.
+- A valid fixture still passes after its schema ID, framing, or duplicated bound drifts.
+- A Python-only regular expression is mistaken for a language-neutral JSON Schema pattern.
+- A nested object is opened even though the top-level object remains closed.
 - An invalid fixture fails, but not for the rule its manifest claims.
+- An oversized valid artifact is mistaken for normative malformed JSON.
 - A fractional usage count rounds into an integer at a large numeric boundary.
+- A Python test covers a portability trap that never reaches the shared client corpus.
 - A symlinked or escaping manifest path reads a file outside the contract corpus.
+- One client's field name or terminal-text policy silently narrows the provider-neutral base contract.
 - A pre-dispatch capability rejection is confused with post-dispatch unsupported output.
 - A provider reports usage before failing and the client discards the observation.
+- Local forced task cleanup is described as proof that remote provider work stopped.
 - Schema success is described as proof of authentication, endpoint, cancellation, or cleanup.
 
 ## Production expansion
@@ -318,8 +412,10 @@ enforce a separate total HTTP-body byte limit, map status codes and authenticati
 boundary, and test its actual request/response handler against the same fixtures. This local checker
 stays small because ICGT-006 validates committed artifacts, not untrusted production traffic.
 
-ICGT-007 can now define provider-neutral non-streaming Go values downstream of this client contract.
-ICGT-009 and ICGT-010 own endpoint admission and normalized transport failures. ICGT-011 through
+ICGT-007 can now define provider-neutral non-streaming Go values downstream of this client contract,
+including optional bounded usage observed before failure. ICGT-009 owns complete admission,
+provider-neutral fake execution, and mandatory no-dispatch capability rejection; ICGT-010 owns the
+loopback-only endpoint and all wire outcome mapping. ICGT-011 through
 ICGT-015 add stream grammar, observable cancellation, and cleanup evidence. ICGT-018 provides the
 first live-provider cleanup evidence, and ICGT-020 later freezes the cross-repository handoff.
 
@@ -327,18 +423,24 @@ first live-provider cleanup evidence, and ICGT-020 later freezes the cross-repos
 
 - Add a temporary unknown field to the minimal request and predict the keyword and JSON Pointer.
 - Change an invalid manifest entry's expected keyword and explain why the checker must fail.
+- Temporarily broaden a framing `const` to an enum and confirm the canonical invariant check fails.
 - Explain why `true` is not an integer even though Python's `bool` subclasses `int`.
 - Compare `unsupported_capability` with `unsupported_upstream_output` in terms of paid work.
+- Explain why an oversized valid fixture cannot prove a normative JSON parse rule.
 - Find one lossy harness mapping and describe the future adapter's safe behavior.
-- Draft the narrowest statement a server test could add after ICGT-009 implements an endpoint.
+- Draft the narrowest statement an admission test could add after ICGT-009.
 
 ## Key takeaways
 
 - Client-visible meaning drives the provider seam, not the other way around.
 - Closed schemas turn unsupported fields into visible failures.
 - Fixtures are stronger when they name the exact rule they intend to prove.
+- Mutation tests distinguish example coverage from invariant coverage.
+- Exact pattern allowlists avoid overstating cross-language regex support.
 - Exact decimal handling matters for integer contracts near large bounds.
+- Cross-language hazards belong in the shared corpus, not only one implementation's tests.
 - Usage is non-authoritative evidence and can exist even when a turn fails.
+- Provider-neutral contracts stay generic even when one client supplies the first requirements.
 - Contract tooling proves artifacts agree; it does not implement or certify a service.
 
 ## Glossary
@@ -349,14 +451,16 @@ first live-provider cleanup evidence, and ICGT-020 later freezes the cross-repos
 - **Closed schema:** an object contract that rejects unknown fields.
 - **JSON Pointer:** a path such as `/usage/input_tokens` locating a value in a JSON document.
 - **Semantic loss:** meaning dropped or changed during translation.
+- **Mutation test:** a test that deliberately changes one protected rule and expects the gate to fail.
+- **Audited allowlist:** the complete, explicitly reviewed set of values a checker may execute.
 - **Pre-dispatch:** before provider work starts.
 - **Post-dispatch:** after provider work may already have started or become billable.
 
 ## Teach-back questions
 
 1. Why must the FastGate client contract be reviewed before ICGT-007 defines provider-domain types?
-2. How does the manifest prove an invalid fixture failed for its intended reason rather than an
-   accidental one?
+2. Why can a valid v1 fixture keep passing after a schema invariant drifts, and how does a mutation
+   test close that gap?
 3. Why are pre-dispatch unsupported capability and post-dispatch unsupported output separate error
    codes, and where may usage appear?
 
