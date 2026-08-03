@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "kind": "model_turn.failed",
+  "request_id": "req-upstream-tool-output",
+  "error": {
+    "code": "unsupported_upstream_output",
+    "message": "The upstream returned output that model-turn v1 does not support.",
+    "retryable": false
+  },
+  "usage": {
+    "input_tokens": 47,
+    "output_tokens": 3
+  }
+}

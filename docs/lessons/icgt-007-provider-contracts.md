@@ -6,7 +6,7 @@
 - **Implementation status:** Planned; no FastGate provider types exist
 - **Story:** [ICGT-007](../../user-stories/icgt-007-define-provider-contracts.md)
 - **Review priority:** High
-- **Visual companion:** Planned after implementation
+- **Visual companion:** Not required; optional only when explicitly requested or separately justified
 - **Related architecture:** [Architecture](../architecture.md) and
   [ADR 0002](../adr/0002-fake-first-openai-first-live.md)
 

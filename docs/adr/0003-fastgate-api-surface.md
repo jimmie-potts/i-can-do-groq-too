@@ -75,10 +75,11 @@ claim Chat Completions or Responses compatibility, and the first endpoint will n
 formats as aliases. A future compatibility facade requires its own client need, contract fixtures,
 and reviewed story or ADR.
 
-The exact v1 fields, bounds, errors, unknown-field policy, and versioning mechanics remain work for
-ICGT-006. The transport endpoint path and binding belong to ICGT-009. Accepting this architectural
-direction does not claim that a schema, endpoint, streaming implementation, cancellation behavior,
-or runtime conformance exists.
+ICGT-006 materializes the exact v1 fields, bounds, normalized-error meanings, strict JSON parse
+profile, unknown-field policy, base/extension versioning mechanics, mapping, fixtures, and offline
+artifact validation. The transport endpoint path and binding belong to ICGT-009. The accepted
+direction and committed schema still do not claim that an endpoint, streaming implementation,
+cancellation behavior, or runtime conformance exists.
 
 ## Rationale
 

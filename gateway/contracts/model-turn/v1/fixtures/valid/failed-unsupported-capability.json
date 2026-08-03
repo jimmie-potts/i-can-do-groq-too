@@ -1,0 +1,10 @@
+{
+  "version": "v1",
+  "kind": "model_turn.failed",
+  "request_id": "req.learning:2",
+  "error": {
+    "code": "unsupported_capability",
+    "message": "The required capability is not supported.",
+    "retryable": false
+  }
+}

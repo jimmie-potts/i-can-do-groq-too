@@ -32,14 +32,14 @@ an individual story is the reviewed contract for one small implementation unit.
 | 3 | [ICGT-003: Establish repository checks](icgt-003-establish-repository-checks.md) | [Repository checks](../docs/lessons/icgt-003-repository-checks.md) | M0 | Done | ICGT-002 | Normal |
 | 4 | [ICGT-004: Select the Go toolchain and module strategy](icgt-004-select-go-toolchain.md) | [Go toolchain and modules](../docs/lessons/icgt-004-go-toolchain-and-modules.md) | M1 | Done | ICGT-003 | High |
 | 5 | [ICGT-005: Bootstrap the FastGate service lifecycle](icgt-005-bootstrap-fastgate-service.md) | [Go service lifecycle](../docs/lessons/icgt-005-go-service-lifecycle.md) | M1 | Done | ICGT-004 | High |
-| 6 | [ICGT-006: Specify and version FastGate's model-turn v1 contract](icgt-006-select-fastgate-api.md) | [Defining FastGate model-turn v1](../docs/lessons/icgt-006-selecting-client-protocol.md) | M1 | Planned | ICGT-005 | High |
+| 6 | [ICGT-006: Specify and version FastGate's model-turn v1 contract](icgt-006-select-fastgate-api.md) | [Defining FastGate model-turn v1](../docs/lessons/icgt-006-selecting-client-protocol.md) | M1 | Done | ICGT-005 | High |
 | 7 | [ICGT-007: Define provider contracts](icgt-007-define-provider-contracts.md) | [Provider contracts](../docs/lessons/icgt-007-provider-contracts.md) | M1 | Planned | ICGT-006 | High |
 | 8 | [ICGT-008: Build the basic deterministic fake upstream](icgt-008-build-basic-fake-upstream.md) | [Basic deterministic fake](../docs/lessons/icgt-008-basic-deterministic-fake.md) | M1 | Planned | ICGT-007 | High |
 
-ICGT-001 through ICGT-005 are delivered and validated. ICGT-006 is next in dependency order and owns
-the first FastGate model-turn schema and fixtures. Promote each later row only after its named
-dependency and start conditions are satisfied; no live provider or public inference endpoint is
-implementation-ready.
+ICGT-001 through ICGT-006 are delivered and validated. ICGT-007 is next and may define only the
+provider-neutral non-streaming contract downstream of model-turn v1. Promote each later row only
+after its named dependency and start conditions are satisfied; no live provider or public inference
+endpoint is implementation-ready.
 
 ## Later outcome slices
 
@@ -75,10 +75,11 @@ See [the outcome backlog](backlog.md) for LatencyLab, operator, TenantPlane, and
 
 ## Review priorities
 
-**High** means the user should personally trace the important production and failure paths. A high
-code-bearing unit requires a visual companion after implementation; a documentation-only foundation
-unit does not. **Normal** still requires the written lesson and review checkpoint but may remain
-text-only unless a visual would materially improve understanding.
+**High** means the user should personally trace the important production and failure paths.
+**Normal** still requires the written lesson and review checkpoint but has a smaller personal-review
+surface. Every implementation-ready story requires exactly one source-backed Markdown lesson.
+Visual companions are optional for both priorities and are created only when explicitly requested or
+separately justified; they are never a requirement for Done.
 
 ## Notes
 
@@ -89,3 +90,6 @@ text-only unless a visual would materially improve understanding.
 - [ICGT-005 FastGate lifecycle](notes/2026-08-02-icgt-005-fastgate-lifecycle.md) records the
   implementation choices, lifecycle and gate evidence, environment constraints, and ICGT-006
   handoff.
+- [ICGT-006 model-turn v1 contract](notes/2026-08-02-icgt-006-model-turn-contract.md) records the
+  schema, mapping, strict parse profile, fixture/validator evidence, review discoveries, and
+  ICGT-007 handoff.

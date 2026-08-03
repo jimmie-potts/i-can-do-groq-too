@@ -37,6 +37,9 @@ appears in a lesson.
 
 ## Visual evidence
 
-Create a required visual companion only after source, tests, and written lesson stabilize. Use the
-presentation workflow available in the current environment, render every slide, inspect the output,
-and record the exact validation in the story note.
+Do not create a visual companion automatically or make one a condition of story completion. A visual
+is optional and may be added only when the user explicitly requests it or a separately reviewed
+justification explains how it materially improves understanding. If selected, wait until source,
+tests, and the written lesson stabilize, then use the presentation workflow available in the current
+environment, render every slide, inspect the output, and record the exact validation in the story
+note.

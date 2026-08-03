@@ -1,0 +1,10 @@
+{
+  "version": "v1",
+  "kind": "model_turn.completed",
+  "request_id": "req-usage-max",
+  "output_text": "Usage remains an observation.",
+  "usage": {
+    "input_tokens": 9007199254740991,
+    "output_tokens": 9007199254740991
+  }
+}

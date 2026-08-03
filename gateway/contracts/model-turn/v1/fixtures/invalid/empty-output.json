@@ -1,0 +1,6 @@
+{
+  "version": "v1",
+  "kind": "model_turn.completed",
+  "request_id": "req-empty-output",
+  "output_text": ""
+}

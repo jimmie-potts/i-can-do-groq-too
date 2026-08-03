@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "kind": "model_turn.request",
+  "request_id": "req-trailing-newline\n",
+  "model_alias": "learning-text",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Reject a control character at the identifier boundary."
+    }
+  ],
+  "repository_instructions": [],
+  "required_capabilities": []
+}

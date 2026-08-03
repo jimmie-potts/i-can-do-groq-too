@@ -1,0 +1,10 @@
+{
+  "version": "v1",
+  "kind": "model_turn.failed",
+  "request_id": "req-unknown-error",
+  "error": {
+    "code": "provider_exploded",
+    "message": "The request failed.",
+    "retryable": false
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "kind": "model_turn.request",
+  "request_id": "req-unknown-capability",
+  "model_alias": "learning-text",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Reject capabilities outside v1."
+    }
+  ],
+  "repository_instructions": [],
+  "required_capabilities": [
+    "image_input"
+  ]
+}

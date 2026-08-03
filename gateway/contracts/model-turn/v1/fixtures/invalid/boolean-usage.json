@@ -1,0 +1,10 @@
+{
+  "version": "v1",
+  "kind": "model_turn.completed",
+  "request_id": "req-boolean-usage",
+  "output_text": "Booleans are not token counts.",
+  "usage": {
+    "input_tokens": true,
+    "output_tokens": 1
+  }
+}

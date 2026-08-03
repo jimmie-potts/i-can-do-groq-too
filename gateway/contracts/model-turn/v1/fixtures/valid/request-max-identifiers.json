@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "kind": "model_turn.request",
+  "request_id": "A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567",
+  "model_alias": "M1234567M1234567M1234567M1234567M1234567M1234567M1234567M1234567M1234567M1234567M1234567M1234567M1234567M1234567M1234567M1234567",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Check exact identifier bounds."
+    }
+  ],
+  "repository_instructions": [],
+  "required_capabilities": []
+}

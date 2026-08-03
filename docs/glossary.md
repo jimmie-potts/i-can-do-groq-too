@@ -35,8 +35,8 @@ outputs, failures, delays, and cancellation points without network or wall-clock
 The versioned, FastGate-owned northbound wire contract for one bounded model interaction. It carries
 client-visible request, result, failure, and later streaming meaning without copying a provider API.
 It is not the harness's agent loop or authority to choose another workflow turn; Code Assist Harness
-uses a separate adapter to translate between those concerns. ICGT-006 still owns the exact v1 schema
-and fixtures.
+uses a separate adapter to translate between those concerns. ICGT-006 commits the exact v1 schema,
+fixtures, mapping, strict parse profile, and offline validator.
 
 ## KV cache
 

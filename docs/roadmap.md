@@ -1,7 +1,7 @@
 # Roadmap
 
-**Status:** Planned outcomes. M0, ICGT-004, and the ICGT-005 FastGate lifecycle are implemented; the
-rest of the M1 walking skeleton remains planned.
+**Status:** Planned outcomes. M0 and ICGT-004 through ICGT-006 are implemented; the provider
+contract, fake upstream, and transport portions of the M1 walking skeleton remain planned.
 
 ## Delivery principles
 
@@ -30,8 +30,8 @@ Reviewed M1 unit sequence:
 - ICGT-004 (Done) selected Go 1.26.5 and one future root module without creating source;
 - ICGT-005 (Done) materialized the selected root-module scaffold and bootstrapped the service
   lifecycle;
-- ICGT-006 define the non-streaming v1 schema, mapping, fixtures, and offline validator for the
-  FastGate-owned protocol selected in ADR 0003;
+- ICGT-006 (Done) defines the non-streaming v1 schema, mapping, fixtures, parse profile, extension
+  versioning rule, and offline validator for the FastGate-owned protocol selected in ADR 0003;
 - ICGT-007 define only the provider-neutral non-streaming gateway contract required by the next
   fake; and
 - ICGT-008 build the basic non-streaming deterministic fake upstream.

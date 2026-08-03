@@ -1,11 +1,12 @@
 # Visual lesson assets
 
-High-review-priority completed units place a PowerPoint companion here using the name
-`icgt-NNN-topic.pptx`.
+Optional PowerPoint companions use the name `icgt-NNN-topic.pptx`. They are created only when the
+user explicitly requests one or a separately reviewed justification shows that a visual materially
+improves understanding; they are never required for story completion.
 
-Do not create placeholder binary files. Add a deck only after the implementation and written lesson
-are stable. Record slide rendering, visual inspection, and overflow validation in the associated
-story note before listing it as verified evidence.
+Do not create placeholder binary files. When a deck is selected, add it only after the implementation
+and written lesson are stable. Record slide rendering, visual inspection, and overflow validation in
+the associated story note before listing the visual itself as verified evidence.
 
 ## Verified companions
 

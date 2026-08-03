@@ -1,0 +1,6 @@
+{
+  "version": "v1",
+  "kind": "model_turn.completed",
+  "request_id": "req-1",
+  "output_text": "One model turn has one bounded outcome."
+}

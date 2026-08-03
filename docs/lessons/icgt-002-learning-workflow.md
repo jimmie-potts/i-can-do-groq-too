@@ -109,9 +109,12 @@ the guidelines, story template, lesson template, and initial one-to-one mappings
 
 ## What changed during implementation
 
-The workflow adapts the strong one-story/one-lesson pattern from Code Assist Harness but avoids
-creating a visual deck for every planning stub. Visual companions are required for high-priority
-completed units only, after code and written evidence stabilize.
+The workflow adapts the strong one-story/one-lesson pattern from Code Assist Harness. ICGT-002
+originally required visual companions for high-priority completed units, and ICGT-005 later produced
+and verified the first such deck. The current learning policy keeps exactly one source-backed
+Markdown lesson mandatory while making visuals optional: create one only when the user explicitly
+requests it or a separately reviewed justification shows that it materially improves understanding.
+The ICGT-005 deck remains historical evidence for that completed unit.
 
 ## Production expansion
 

@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "kind": "model_turn.request",
+  "request_id": "req-duplicate-key",
+  "request_id": "req-shadowed-key",
+  "model_alias": "learning-text",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Reject ambiguous object keys."
+    }
+  ],
+  "repository_instructions": [],
+  "required_capabilities": []
+}

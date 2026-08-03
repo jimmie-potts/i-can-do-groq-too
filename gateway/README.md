@@ -1,7 +1,7 @@
 # FastGate
 
-**Status:** Lifecycle foundation implemented. FastGate currently serves only operational health;
-no inference endpoint, provider contract, or provider adapter exists yet.
+**Status:** Lifecycle and model-turn v1 contract tooling implemented. FastGate currently serves only
+operational health; no inference endpoint, provider contract, or provider adapter exists yet.
 
 FastGate is the first implementation target: a small inference gateway that gives clients one
 reviewed model-turn contract while keeping provider transport, streaming, routing, rate limits, and
@@ -17,7 +17,7 @@ The initial implementation sequence is intentionally smaller than “build a gat
    endpoint after the local toolchain preflight—completed by ICGT-005;
 3. materialize the FastGate-owned protocol selected in
    [ADR 0003](../docs/adr/0003-fastgate-api-surface.md) as a versioned non-streaming schema and
-   fixtures;
+   fixtures—completed by ICGT-006;
 4. define FastGate-owned provider request, result, and failure values for one non-streaming
    invocation;
 5. implement a basic non-streaming deterministic fake upstream;
@@ -30,8 +30,8 @@ The initial implementation sequence is intentionally smaller than “build a gat
 11. add OpenAI as the first opt-in live upstream; and
 12. add Groq only after direct and gateway baselines can be compared.
 
-The reviewed planned sequence currently stops at steps 1 through 5. Steps 1 and 2 are complete;
-step 3 is next in dependency order. Promote one step at a time as its upstream evidence and start
+The reviewed planned sequence currently stops at steps 1 through 5. Steps 1 through 3 are complete;
+step 4 is next in dependency order. Promote one step at a time as its upstream evidence and start
 conditions are accepted. Later steps are roadmap outcomes until their dependencies produce evidence.
 
 ## Run the lifecycle foundation

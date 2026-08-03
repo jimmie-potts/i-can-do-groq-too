@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "kind": "model_turn.request",
+  "request_id": "req-1",
+  "model_alias": "learning-text",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Explain one model turn."
+    }
+  ],
+  "repository_instructions": [],
+  "required_capabilities": []
+}

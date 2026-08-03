@@ -8,11 +8,12 @@ current implementation status.
 
 ## Current implementation slice
 
-ICGT-005 implements the repository-root Go module and the first FastGate process lifecycle. The
-process validates bounded HTTP settings, serves `GET /healthz`, and owns graceful shutdown through
-the final server join. This operational route reports only that the local process is serving. The
-model-turn schema, inference transport endpoint, provider port, fake upstream, and every live
-provider remain deferred to their owning stories.
+ICGT-005 implements the repository-root Go module and the first FastGate process lifecycle. ICGT-006
+implements the strict, non-streaming model-turn v1 schemas, language-neutral fixture corpus,
+harness-semantic mapping, and offline artifact validator. The process still serves only
+`GET /healthz`; the committed contract tooling is not wired to HTTP. The inference transport
+endpoint, provider port, fake upstream, and every live provider remain deferred to their owning
+stories.
 
 ## System context
 
@@ -81,9 +82,10 @@ The current harness provider port already expresses the essential seam:
 - no provider SDK values in harness state.
 
 That port should not be redesigned for FastGate now. The CAH-023 direct OpenAI adapter remains the
-direct baseline. This repository later publishes a versioned FastGate wire contract and conformance
-bundle. A separate Code Assist Harness story owns the client adapter rather than this repository
-writing harness code or masquerading as the official OpenAI endpoint.
+direct baseline. ICGT-006 commits the model-turn v1 schema and fixture source; ICGT-020 and ICGT-021
+later freeze and package the adapter-ready conformance bundle. A separate Code Assist Harness story
+owns the client adapter rather than this repository writing harness code or masquerading as the
+official OpenAI endpoint.
 
 ```text
 Harness Provider implementations
