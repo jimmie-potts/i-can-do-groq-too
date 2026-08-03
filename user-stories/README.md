@@ -33,11 +33,11 @@ an individual story is the reviewed contract for one small implementation unit.
 | 4 | [ICGT-004: Select the Go toolchain and module strategy](icgt-004-select-go-toolchain.md) | [Go toolchain and modules](../docs/lessons/icgt-004-go-toolchain-and-modules.md) | M1 | Done | ICGT-003 | High |
 | 5 | [ICGT-005: Bootstrap the FastGate service lifecycle](icgt-005-bootstrap-fastgate-service.md) | [Go service lifecycle](../docs/lessons/icgt-005-go-service-lifecycle.md) | M1 | Done | ICGT-004 | High |
 | 6 | [ICGT-006: Specify and version FastGate's model-turn v1 contract](icgt-006-select-fastgate-api.md) | [Defining FastGate model-turn v1](../docs/lessons/icgt-006-selecting-client-protocol.md) | M1 | Done | ICGT-005 | High |
-| 7 | [ICGT-007: Define provider contracts](icgt-007-define-provider-contracts.md) | [Provider contracts](../docs/lessons/icgt-007-provider-contracts.md) | M1 | Planned | ICGT-006 | High |
+| 7 | [ICGT-007: Define provider contracts](icgt-007-define-provider-contracts.md) | [Provider contracts](../docs/lessons/icgt-007-provider-contracts.md) | M1 | Done | ICGT-006 | High |
 | 8 | [ICGT-008: Build the basic deterministic fake upstream](icgt-008-build-basic-fake-upstream.md) | [Basic deterministic fake](../docs/lessons/icgt-008-basic-deterministic-fake.md) | M1 | Planned | ICGT-007 | High |
 
-ICGT-001 through ICGT-006 are delivered and validated. ICGT-007 is next and may define only the
-provider-neutral non-streaming contract downstream of model-turn v1. Promote each later row only
+ICGT-001 through ICGT-007 are delivered and validated. ICGT-008 is next and may implement only the
+basic deterministic fake for the provider-neutral non-streaming contract. Promote each later row only
 after its named dependency and start conditions are satisfied; no live provider or public inference
 endpoint is implementation-ready.
 
@@ -121,3 +121,6 @@ separately justified; they are never a requirement for Done.
 - [ICGT-006 model-turn v1 contract](notes/2026-08-02-icgt-006-model-turn-contract.md) records the
   schema, mapping, strict parse profile, fixture/validator evidence, review discoveries, and
   ICGT-007 handoff.
+- [ICGT-007 provider contracts](notes/2026-08-03-icgt-007-provider-contracts.md) records the
+  internal request/result boundary, reviewed outcome alternatives, validation evidence, and
+  ICGT-008 handoff.

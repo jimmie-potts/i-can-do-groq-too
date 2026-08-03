@@ -195,6 +195,25 @@ task/stream closure in particular does not prove remote provider termination.
 Why: documenting an observation at the wire while a downstream type cannot represent it guarantees a
 future silent drop.
 
+### Bounded constructors and terminal alternatives
+
+- Are collection cardinalities checked before cloning, reserving, sorting, or otherwise allocating
+  in proportion to caller input?
+- Does text validation stop once the reviewed maximum is exceeded while still rejecting invalid
+  encoding inside the accepted range?
+- If an error channel carries caller cancellation, must the returned sentinel match the supplied
+  caller context rather than trusting an adapter's assertion?
+- Are success, normalized failure, and caller termination mutually exclusive, including zero-value,
+  typed-nil, wrapped-error, and simultaneous result/error cases?
+- Does rejection of untrusted error types avoid traversing provider-controlled `Unwrap` or `As`
+  methods before normalization?
+- Is a privacy-sensitive normalized value locked to an exact allowed field inventory rather than a
+  denylist that future arbitrary containers could bypass?
+
+Why: a value can be logically bounded yet allocate before validation, and an apparently normalized
+error channel can still admit fabricated cancellation, ambiguous outcomes, unsafe wrappers, or
+provider-controlled behavior during rejection.
+
 ## Story ownership and governing policy
 
 ### Earliest enforceable owner
@@ -243,3 +262,14 @@ artifact-error subclass cannot accidentally satisfy them. Shared fixtures preser
 and escaped-surrogate-pair portability cases, including the pair's source escape spelling. The
 remaining checks are durable review questions because their evidence spans mapping and story
 documents rather than one executable unit.
+
+## Evidence added during ICGT-007
+
+The ICGT-007 review found that the first provider-request constructor copied slices before checking
+their cardinality and that the first outcome validator accepted cancellation sentinels without
+checking the caller context. It also found an order-sensitive parity assertion for semantically
+unordered JSON Schema enums. The fixes and regression evidence live in:
+
+- [`NewRequest` and `ValidateInvocation`](../gateway/internal/provider/provider.go);
+- [provider boundary and outcome tests](../gateway/internal/provider/provider_test.go); and
+- [the ICGT-007 learning companion](lessons/icgt-007-provider-contracts.md).

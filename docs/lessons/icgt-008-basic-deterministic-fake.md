@@ -3,14 +3,16 @@
 - **Unit:** ICGT-008
 - **Milestone:** M1 - FastGate non-streaming walking skeleton
 - **Lesson status:** Planned
-- **Implementation status:** Planned; no fake upstream exists
+- **Implementation status:** Planned; the provider port exists, but no fake upstream exists
 - **Story:** [ICGT-008](../../user-stories/icgt-008-build-basic-fake-upstream.md)
 - **Review priority:** High
 - **Visual companion:** Not required; optional only when explicitly requested or separately justified
 - **Related architecture:** [ADR 0002](../adr/0002-fake-first-openai-first-live.md) and
   [FastGate agent guidelines](../../gateway/AGENTS.md)
 
-> The script concepts below are planned. No Go API has been selected.
+> The script concepts below are planned. The reviewed
+> [`provider.Invoker`](../../gateway/internal/provider/provider.go) is the interface to implement;
+> no fake type or scripting API has been selected.
 
 ## Quick summary
 
@@ -58,9 +60,9 @@ the later event-grammar and concurrency-fake units.
 
 ## Practical walkthrough
 
-The implementation should begin with one exact successful exchange, then add enumerated failures
-with absent and present usage, mismatch, and exhaustion errors. Each state is covered before the fake
-is used by an HTTP endpoint.
+The implementation should begin with one exact successful exchange over the existing provider
+values, then add enumerated failures with absent and present usage, mismatch, and exhaustion errors.
+Each state is covered before the fake is used by an HTTP endpoint.
 
 ## Personal code review map
 

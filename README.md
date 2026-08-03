@@ -10,21 +10,23 @@ into one small, observable inference platform.
 ## Current status
 
 The repository foundation, Go toolchain decision,
-[ICGT-005 FastGate lifecycle](user-stories/icgt-005-bootstrap-fastgate-service.md), and
-[ICGT-006 model-turn v1 contract](user-stories/icgt-006-select-fastgate-api.md) are implemented. The
-root Go module contains one standard-library-only executable that serves operational health and
-shuts down cleanly. FastGate now also owns strict language-neutral request, result, and failure
-schemas; a harness mapping; 26 fixtures; and a dependency-free offline contract validator.
+[ICGT-005 FastGate lifecycle](user-stories/icgt-005-bootstrap-fastgate-service.md),
+[ICGT-006 model-turn v1 contract](user-stories/icgt-006-select-fastgate-api.md), and
+[ICGT-007 provider contract](user-stories/icgt-007-define-provider-contracts.md) are implemented.
+The root Go module contains one standard-library-only executable that serves operational health and
+shuts down cleanly. FastGate also owns strict language-neutral request, result, and failure schemas;
+a harness mapping; 26 fixtures; a dependency-free offline contract validator; and bounded internal
+provider request, result, failure, and invocation contracts.
 
-[ICGT-007](user-stories/icgt-007-define-provider-contracts.md) is next in dependency order. No
-inference request endpoint, provider contract or adapter, database, Kubernetes controller, or
-simulator has been implemented yet.
+[ICGT-008](user-stories/icgt-008-build-basic-fake-upstream.md) is next in dependency order. No
+inference request endpoint or provider adapter, database, Kubernetes controller, or simulator has
+been implemented yet. The provider contract is an internal seam, not working inference behavior.
 
 ## What we are building
 
 | Order | Component | Responsibility | Status |
 | ---: | --- | --- | --- |
-| 1 | [FastGate](gateway/README.md) | Provider transport, streaming, routing, limits, and operational telemetry | Lifecycle and v1 contract tooling implemented |
+| 1 | [FastGate](gateway/README.md) | Provider transport, streaming, routing, limits, and operational telemetry | Lifecycle, v1 wire contract, and internal provider contract implemented |
 | 2 | [LatencyLab](latency-lab/README.md) | Inference-aware load, latency, and failure experiments | Planned |
 | 3 | [ModelEndpoint Operator](model-operator/README.md) | Kubernetes reconciliation for inference-facing services | Planned |
 | 4 | [TenantPlane](control-plane/README.md) | Identity, authorization, quota, budget, usage, and audit control plane | Planned |
@@ -99,7 +101,7 @@ verified.
 
 ```text
 .
-├── gateway/              FastGate lifecycle plus versioned client-contract artifacts
+├── gateway/              FastGate lifecycle plus client and provider contract artifacts
 ├── latency-lab/          LatencyLab scope
 ├── model-operator/       ModelEndpoint Operator scope
 ├── control-plane/        TenantPlane scope
@@ -134,7 +136,8 @@ preparation occur before the gate; the gate itself does not download tools or mo
 - [ADR 0003](docs/adr/0003-fastgate-api-surface.md) selects a small FastGate-owned model-turn
   protocol as the first public contract. ICGT-006 materializes its exact non-streaming schema,
   bounds, mapping, fixtures, parse profile, version rule, and offline validator. Chat Completions and
-  Responses compatibility facades are not part of v1.
+  Responses compatibility facades are not part of v1. ICGT-007 defines the smaller internal
+  provider port downstream of that wire contract without exposing wire or vendor types.
 - A deterministic fake will precede either live provider, while OpenAI will be the first live
   FastGate provider and Groq will follow after measurable baseline behavior exists.
 - Provider differences are explicit capabilities. Unsupported behavior is rejected, emulated, or

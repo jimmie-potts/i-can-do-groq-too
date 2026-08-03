@@ -1,6 +1,6 @@
 # ICGT-007 - Define FastGate provider contracts
 
-- **Status:** Planned
+- **Status:** Done
 - **Milestone:** M1 - FastGate non-streaming walking skeleton
 - **Dependencies:** ICGT-006
 - **Lesson:** [Provider contracts](../docs/lessons/icgt-007-provider-contracts.md)
@@ -36,6 +36,16 @@
   port. An adapter cannot return either category for work that was already invoked.
 - The invocation receives the caller's context, but this unit does not invent an asynchronous
   operation, stream grammar, explicit cancel method, or cleanup-confirmation state.
+- The provider request contains ordered conversation, ordered generic instructions, and only the
+  selected required-capability data. Wire framing, `request_id`, `model_alias`, provider IDs,
+  routing, credentials, and endpoints do not cross the provider port.
+- `Invoke` returns one valid result with `nil`, one zero result with a direct project-owned
+  `*Failure`, or one zero result with exactly `context.Canceled` or `context.DeadlineExceeded` when
+  that value matches the supplied caller context. Wrapped failures, wrapped context errors, raw
+  provider errors, and a simultaneous result plus error are invalid outcomes.
+- Adapter-returnable failure codes are exactly `authentication_failed`, `rate_limited`,
+  `request_rejected`, `unavailable`, `invalid_response`, `unsupported_upstream_output`, and
+  `internal_error`.
 
 ## Acceptance criteria
 
@@ -46,15 +56,16 @@
 4. Normalized failed outcomes have no arbitrary string field that could carry raw provider
    exceptions, response bodies, headers, or credentials. They preserve optional usage unchanged and
    test absent, zero, maximum, and above-maximum cases.
-5. One context-aware call returns exactly one bounded result or normalized failure; it defines no
-   streaming or asynchronous operation lifecycle.
+5. One context-aware call returns exactly one bounded result, normalized failure, or matching caller
+   context termination; it defines no streaming or asynchronous operation lifecycle.
 6. Contract, validation, and compile-time tests run without an SDK, credentials, or network.
 7. The lesson compares this non-streaming port with the harness's asynchronous port without copying
    its Python types or lifecycle prematurely.
 
 ## Human review checkpoint
 
-- **Production path:** Request validation through one bounded non-streaming invocation and result.
+- **Production path:** `NewRequest` bounded validation and ownership through `Invoker.Invoke` and
+  `ValidateInvocation`'s completed-result alternative.
 - **Failure/test path:** Malformed/unbounded request, unsafe failure rejection, and failure-side usage
   overflow without losing a valid observation.
 - **Invariant:** FastGate domain code depends on its own vocabulary and never discards an observation

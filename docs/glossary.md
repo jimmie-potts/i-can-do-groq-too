@@ -54,6 +54,14 @@ putting vendor identifiers into workflow code.
 The boundary translator between provider-specific configuration and wire events and a project-owned
 request, event, failure, cancellation, and cleanup contract.
 
+## Provider port
+
+The small interface and provider-neutral values FastGate owns for invoking an upstream. The port
+states what FastGate needs; a fake or live provider adapter implements it. The current ICGT-007 port
+is synchronous and non-streaming, accepts the caller context, and returns one reviewed completion,
+failure, or caller-termination alternative. It is not the northbound client wire protocol and
+contains no provider SDK, credential, endpoint, model-routing, or raw-error value.
+
 ## Reconciliation
 
 An idempotent control loop that repeatedly moves observed state toward declared desired state.

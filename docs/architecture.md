@@ -10,10 +10,24 @@ current implementation status.
 
 ICGT-005 implements the repository-root Go module and the first FastGate process lifecycle. ICGT-006
 implements the strict, non-streaming model-turn v1 schemas, language-neutral fixture corpus,
-harness-semantic mapping, and offline artifact validator. The process still serves only
-`GET /healthz`; the committed contract tooling is not wired to HTTP. The inference transport
-endpoint, provider port, fake upstream, and every live provider remain deferred to their owning
-stories.
+harness-semantic mapping, and offline artifact validator. ICGT-007 implements the bounded internal
+provider request, result, normalized failure, and synchronous context-aware invocation contract.
+The process still serves only `GET /healthz`; neither contract is wired to inference execution or
+HTTP. The inference transport endpoint, fake upstream, and every live provider remain deferred to
+their owning stories.
+
+The northbound model-turn protocol and southbound provider port deliberately are not the same type:
+
+```text
+client wire document -> future admission/mapping -> internal provider Request -> future adapter
+```
+
+The internal request retains ordered conversation, generic instructions, and required capabilities.
+It excludes wire framing and correlation (`version`, `kind`, `request_id`), routing
+(`model_alias`, provider model IDs), credentials, endpoints, and vendor objects. Adapters return
+only a bounded result, a direct normalized provider failure, or the exact termination sentinel from
+the caller context. Admission-owned `invalid_request` and `unsupported_capability` failures never
+cross back from an invoked adapter.
 
 ## System context
 
