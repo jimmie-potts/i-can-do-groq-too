@@ -1,8 +1,8 @@
 # FastGate
 
-**Status:** Lifecycle, model-turn v1 contract tooling, and the internal provider contract are
-implemented. FastGate currently serves only operational health; no inference endpoint or provider
-adapter exists yet.
+**Status:** Lifecycle, model-turn v1 contract tooling, the internal provider contract, and its basic
+deterministic fake are implemented. FastGate currently serves only operational health; no inference
+endpoint or live provider adapter exists yet.
 
 FastGate is the first implementation target: a small inference gateway that gives clients one
 reviewed model-turn contract while keeping provider transport, streaming, routing, rate limits, and
@@ -21,7 +21,7 @@ The initial implementation sequence is intentionally smaller than “build a gat
    fixtures—completed by ICGT-006;
 4. define FastGate-owned provider request, result, and failure values for one non-streaming
    invocation—completed by ICGT-007;
-5. implement a basic non-streaming deterministic fake upstream;
+5. implement a basic non-streaming deterministic fake upstream—completed by ICGT-008;
 6. implement bounded body/semantic admission and one provider-neutral fake execution without HTTP
    binding;
 7. bind a loopback-only endpoint, reject wrong method/media type before dispatch, and map every
@@ -33,14 +33,19 @@ The initial implementation sequence is intentionally smaller than “build a gat
 11. add OpenAI as the first opt-in live upstream; and
 12. add Groq only after direct and gateway baselines can be compared.
 
-The reviewed planned sequence currently stops at steps 1 through 5. Steps 1 through 4 are complete;
-step 5 is next in dependency order. Promote one step at a time as its upstream evidence and start
-conditions are accepted. Later steps are roadmap outcomes until their dependencies produce evidence.
+The reviewed planned sequence currently stops at steps 1 through 5, and all five are complete.
+ICGT-009 is the next outcome in dependency order, but it remains a roadmap slice until a reviewed
+story and lesson lock its exact admission and provider-neutral execution boundary.
 
 The provider-neutral seam lives in [`internal/provider`](internal/provider). It carries only ordered
 conversation, generic instructions, required capabilities, completed text, optional usage, and
 normalized provider failures. Wire framing, logical aliases, credentials, endpoints, provider
 model IDs, retries, routing, and concrete SDK types remain outside it.
+
+The strict test implementation lives in [`internal/provider/fake`](internal/provider/fake). It owns
+one bounded ordered script, matches every provider request field exactly, and returns a scripted
+result or direct normalized failure. It performs no transport work and deliberately defers
+streaming, cancellation behavior, logical gates, and concurrency to their later stories.
 
 ## Run the lifecycle foundation
 

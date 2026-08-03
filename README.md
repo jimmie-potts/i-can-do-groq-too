@@ -11,22 +11,25 @@ into one small, observable inference platform.
 
 The repository foundation, Go toolchain decision,
 [ICGT-005 FastGate lifecycle](user-stories/icgt-005-bootstrap-fastgate-service.md),
-[ICGT-006 model-turn v1 contract](user-stories/icgt-006-select-fastgate-api.md), and
-[ICGT-007 provider contract](user-stories/icgt-007-define-provider-contracts.md) are implemented.
+[ICGT-006 model-turn v1 contract](user-stories/icgt-006-select-fastgate-api.md),
+[ICGT-007 provider contract](user-stories/icgt-007-define-provider-contracts.md), and
+[ICGT-008 deterministic fake](user-stories/icgt-008-build-basic-fake-upstream.md) are implemented.
 The root Go module contains one standard-library-only executable that serves operational health and
 shuts down cleanly. FastGate also owns strict language-neutral request, result, and failure schemas;
 a harness mapping; 26 fixtures; a dependency-free offline contract validator; and bounded internal
-provider request, result, failure, and invocation contracts.
+provider request, result, failure, and invocation contracts. A strict in-memory fake implements that
+port with ordered exact matching, controlled terminal outcomes, and complete-script verification.
 
-[ICGT-008](user-stories/icgt-008-build-basic-fake-upstream.md) is next in dependency order. No
-inference request endpoint or provider adapter, database, Kubernetes controller, or simulator has
-been implemented yet. The provider contract is an internal seam, not working inference behavior.
+No inference request endpoint or live provider adapter, database, Kubernetes controller, or
+simulator has been implemented yet. The provider contract and fake are internal test seams, not
+working inference behavior. ICGT-009 is the next outcome in dependency order, but it still needs a
+reviewed story and lesson before implementation.
 
 ## What we are building
 
 | Order | Component | Responsibility | Status |
 | ---: | --- | --- | --- |
-| 1 | [FastGate](gateway/README.md) | Provider transport, streaming, routing, limits, and operational telemetry | Lifecycle, v1 wire contract, and internal provider contract implemented |
+| 1 | [FastGate](gateway/README.md) | Provider transport, streaming, routing, limits, and operational telemetry | Lifecycle, v1 wire contract, internal provider contract, and deterministic fake implemented |
 | 2 | [LatencyLab](latency-lab/README.md) | Inference-aware load, latency, and failure experiments | Planned |
 | 3 | [ModelEndpoint Operator](model-operator/README.md) | Kubernetes reconciliation for inference-facing services | Planned |
 | 4 | [TenantPlane](control-plane/README.md) | Identity, authorization, quota, budget, usage, and audit control plane | Planned |
@@ -101,7 +104,7 @@ verified.
 
 ```text
 .
-├── gateway/              FastGate lifecycle plus client and provider contract artifacts
+├── gateway/              FastGate lifecycle, contracts, and deterministic fake
 ├── latency-lab/          LatencyLab scope
 ├── model-operator/       ModelEndpoint Operator scope
 ├── control-plane/        TenantPlane scope
@@ -137,9 +140,10 @@ preparation occur before the gate; the gate itself does not download tools or mo
   protocol as the first public contract. ICGT-006 materializes its exact non-streaming schema,
   bounds, mapping, fixtures, parse profile, version rule, and offline validator. Chat Completions and
   Responses compatibility facades are not part of v1. ICGT-007 defines the smaller internal
-  provider port downstream of that wire contract without exposing wire or vendor types.
-- A deterministic fake will precede either live provider, while OpenAI will be the first live
-  FastGate provider and Groq will follow after measurable baseline behavior exists.
+  provider port downstream of that wire contract without exposing wire or vendor types. ICGT-008
+  implements the port with a strict test-only deterministic fake.
+- The deterministic fake now precedes either live provider. OpenAI will be the first live FastGate
+  provider, and Groq will follow after measurable baseline behavior exists.
 - Provider differences are explicit capabilities. Unsupported behavior is rejected, emulated, or
   rerouted; it is never silently ignored.
 - FastGate, LatencyLab, the operator, TenantPlane, and FleetSim do not use LangChain or LangGraph as

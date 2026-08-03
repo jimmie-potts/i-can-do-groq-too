@@ -1,7 +1,7 @@
 # Roadmap
 
-**Status:** Planned outcomes. M0 and ICGT-004 through ICGT-007 are implemented; the fake upstream
-and transport portions of the M1 walking skeleton remain planned.
+**Status:** Planned outcomes. M0 and ICGT-004 through ICGT-008 are implemented; admission and
+transport portions of the M1 walking skeleton remain planned.
 
 ## Delivery principles
 
@@ -34,7 +34,7 @@ Reviewed M1 unit sequence:
   versioning rule, and offline validator for the FastGate-owned protocol selected in ADR 0003;
 - ICGT-007 (Done) defines only the provider-neutral non-streaming gateway contract required by the
   next fake; and
-- ICGT-008 build the basic non-streaming deterministic fake upstream.
+- ICGT-008 (Done) implements the basic non-streaming deterministic fake upstream.
 
 Later units split admission/provider-neutral execution, endpoint/outcome mapping, FastGate-owned stream
 grammar, and deterministic concurrency/cancellation behavior so each review has one primary concept.
@@ -134,8 +134,9 @@ statements are complementary, not competing sequences.
 
 ## Detailed-planning boundary
 
-The detailed, linked planned-story list ends at ICGT-008 on purpose. Only the first dependency-ready
-unit may be started. Later rows in
+The detailed, linked story list ends at the delivered ICGT-008 on purpose. ICGT-009 is the next
+dependency-ready outcome, but it may start only after its reviewed story and lesson lock the unit.
+Later rows in
 [the backlog](../user-stories/backlog.md) are outcome slices, not promises that their contracts are
 ready. Before promoting one, create its story and lesson, lock dependencies and exclusions, and
 name the exact human review checkpoint.

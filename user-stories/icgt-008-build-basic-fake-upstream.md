@@ -1,6 +1,6 @@
 # ICGT-008 - Build the basic deterministic fake upstream
 
-- **Status:** Planned
+- **Status:** Done
 - **Milestone:** M1 - FastGate non-streaming walking skeleton
 - **Dependencies:** ICGT-007
 - **Lesson:** [Basic deterministic fake](../docs/lessons/icgt-008-basic-deterministic-fake.md)
@@ -25,6 +25,15 @@
 - Mismatch messages identify bounded field paths or ordinals, never request content.
 - Fake completion is explicit; test teardown can assert the entire script was consumed.
 - The fake performs no filesystem, process, environment, or network I/O.
+- `Exchange` values are built through separate result and failure constructors. `Provider` owns a
+  copied ordered script with at most 64 exchanges; an empty script explicitly expects zero calls.
+- Matching checks only the next exchange. It treats nil and empty optional lists alike, preserves
+  list order, and compares Unicode exactly without normalization.
+- A mismatch, extra invocation, or nil context is a test-programming error outside the provider
+  outcome contract. It records one content-safe diagnostic and panics; the violation remains visible
+  through `VerifyComplete` even if the panic is recovered.
+- The basic fake has one owner and is not concurrency-safe. It does not inspect cancellation or
+  deadlines, so an already-canceled nonnil context still receives the scripted outcome.
 
 ## Acceptance criteria
 
@@ -47,13 +56,14 @@
 
 ## Validation
 
-- Focused fake contract and exhaustion tests.
-- Sentinel-content diagnostic assertions.
-- Repeated deterministic runs and `./scripts/check`.
+- `GOCACHE=/tmp/icgt-go-build go test ./gateway/internal/provider/fake`
+- `GOCACHE=/tmp/icgt-go-build go test -count=50 ./gateway/internal/provider/fake`
+- `./scripts/check`
 
 ## Documentation impact
 
-Update the FastGate provider package map and lesson with exact production and test excerpts.
+The FastGate provider package map, repository status documents, implementation note, review
+checklist, and lesson contain exact production and test evidence.
 
 ## Out of scope
 

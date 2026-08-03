@@ -28,7 +28,8 @@ data-plane component.
 ## Deterministic fake
 
 A programmable implementation of a real port that verifies exact inputs and emits controlled
-outputs, failures, delays, and cancellation points without network or wall-clock uncertainty.
+outputs or failures without network or wall-clock uncertainty. ICGT-008 implements the basic ordered,
+non-streaming form; delays, stream gates, and cancellation checkpoints remain later extensions.
 
 ## FastGate model-turn protocol
 

@@ -12,14 +12,14 @@ ICGT-005 implements the repository-root Go module and the first FastGate process
 implements the strict, non-streaming model-turn v1 schemas, language-neutral fixture corpus,
 harness-semantic mapping, and offline artifact validator. ICGT-007 implements the bounded internal
 provider request, result, normalized failure, and synchronous context-aware invocation contract.
-The process still serves only `GET /healthz`; neither contract is wired to inference execution or
-HTTP. The inference transport endpoint, fake upstream, and every live provider remain deferred to
-their owning stories.
+ICGT-008 implements a strict, ordered, in-memory fake for that port. The process still serves only
+`GET /healthz`; the wire contract and fake are not wired to inference execution or HTTP. The
+inference transport endpoint and every live provider remain deferred to their owning stories.
 
 The northbound model-turn protocol and southbound provider port deliberately are not the same type:
 
 ```text
-client wire document -> future admission/mapping -> internal provider Request -> future adapter
+client wire document -> future admission/mapping -> internal provider Request -> fake or future adapter
 ```
 
 The internal request retains ordered conversation, generic instructions, and required capabilities.
@@ -108,7 +108,7 @@ Harness Provider implementations
   - FastGateProvider             future, CAH-owned separate adapter
 
 FastGate upstream implementations
-  - Deterministic fake upstream  first local infrastructure proof
+  - Deterministic fake upstream  implemented local infrastructure proof
   - OpenAI upstream              first live baseline
   - Groq upstream                later measured expansion
   - Self-hosted upstream         later cache/runtime experiments
