@@ -62,7 +62,8 @@
    future harness-owned adapter pins the same contract version and runs applicable fixtures in the
    harness repository.
 8. A committed offline, credential-free contract test accepts every valid fixture, rejects every
-   invalid fixture, validates schema syntax, and runs from `./scripts/check`.
+   invalid fixture, validates schema syntax, rejects any validation-affecting drift from the frozen
+   canonical v1 schemas, and runs from `./scripts/check`.
 9. The mapping distinguishes FastGate adapter configuration—trusted endpoint, authentication, and
    logical model alias—from fields in the current harness provider request.
 10. The mapping assigns adapter implementation to Code Assist Harness and does not weaken or
@@ -76,8 +77,9 @@
   through the [request schema](../gateway/contracts/model-turn/v1/schema/request.schema.json) and
   [offline validator](../scripts/check_contract.py). There is no service request path in this unit.
 - **Failure/test path:** Trace the [unknown-field fixture](../gateway/contracts/model-turn/v1/fixtures/invalid/unknown-request-field.json)
-  through its manifest expectation, then personally review the canonical-root mutation and
-  artifact-guard-versus-`json` regressions in [the checker suite](../tests/test_check_contract.py).
+  through its manifest expectation, then personally review the nested-schema fingerprint mutations,
+  bounded-read probe, and artifact-guard-versus-`json` regressions in
+  [the checker suite](../tests/test_check_contract.py).
 - **Invariant:** FastGate's internal provider seam is downstream of a reviewed client contract.
 - **Deferred:** Go provider types, fake upstream, HTTP handler, SSE implementation, and adapters.
 

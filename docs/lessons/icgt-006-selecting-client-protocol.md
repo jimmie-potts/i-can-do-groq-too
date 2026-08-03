@@ -172,10 +172,20 @@ because of some other accidental defect, the checker reports an intended-rule mi
 
 ### 4. Strict loading happens before schema validation
 
-The [checker](../../scripts/check_contract.py) loads each repository artifact with one-megabyte,
-128-level nesting, and exact-decimal implementation guards; requires UTF-8; rejects duplicate object
-keys and JSON's non-standard `NaN`/`Infinity` spellings; rejects decoded lone surrogates; and parses
-all numbers exactly:
+The [checker](../../scripts/check_contract.py) opens each repository artifact once and requests only
+the one-megabyte limit plus one byte. That extra byte distinguishes an exactly-at-limit file from an
+oversized file without first allocating the whole artifact:
+
+```python
+with path.open("rb") as source:
+    raw = source.read(MAX_JSON_BYTES + 1)
+if len(raw) > MAX_JSON_BYTES:
+    raise JSONArtifactError("JSON document exceeds the checker size limit")
+```
+
+After that allocation guard, it enforces 128-level nesting and exact-decimal implementation limits;
+requires UTF-8; rejects duplicate object keys and JSON's non-standard `NaN`/`Infinity` spellings;
+rejects decoded lone surrogates; and parses all numbers exactly:
 
 ```python
 document = json.loads(
@@ -193,6 +203,12 @@ stays a number and then fails the applicable `maximum`; it is not mislabeled as 
 The size, nesting, and numeric implementation-range guards protect this repository checker only. A
 refusal at any guard is an artifact error, not a normative claim that the source document is
 malformed JSON.
+
+The manifest's symlink and path checks assume a stable checkout. They reject repository artifacts
+that are already symlinks, but they are not an atomic defense against another process replacing a
+path during validation. Opening once and reading through that descriptor keeps the byte bound true
+even in that race; fully atomic component traversal would be platform-specific and is outside this
+offline gate's threat model.
 
 The checker next rejects any schema keyword outside its explicit profile. This prevents a future
 author from adding `$ref`, `oneOf`, or another unsupported rule that the local validator would
@@ -213,6 +229,26 @@ CANONICAL_SCHEMA_METADATA = {
 }
 ```
 
+Targeted checks give clear errors, but manually listing selected fields cannot prove every nested
+rule remains frozen. The checker therefore also compares a SHA-256 fingerprint of each complete
+validation-affecting schema tree:
+
+```python
+expected_fingerprint = V1_SCHEMA_VALIDATION_FINGERPRINTS.get(relative)
+if schema_validation_fingerprint(schema) != expected_fingerprint:
+    errors.append(
+        f"schema {relative}: validation rules must match the frozen v1 contract"
+    )
+```
+
+The fingerprint excludes only `title` and `description` when they are schema annotations. A property
+or enum value that happens to be named `title` or `description` still affects the fingerprint. It sorts
+object keys and the semantically unordered `required` and `enum` arrays, and it normalizes exact JSON
+numbers. Formatting, annotation, or harmless ordering edits therefore do not look like protocol
+changes, while any nested type, bound, property, pattern, constant, or enum change does. The three
+expected fingerprints are independent review anchors; the gate also checks that their inventory
+exactly matches the canonical schemas and never regenerates them automatically.
+
 The schema profile also enforces closed nested objects and refuses to compile arbitrary patterns:
 
 ```python
@@ -232,8 +268,10 @@ true end check because `$` may match before a trailing newline.
 
 The focused tests mutate one invariant at a time while keeping existing fixture values usable. They
 prove the gate rejects mistyped, wrong-version, and duplicate IDs; broadened or optional framing;
-removed or added canonical root fields; root and nested open objects; Python-only named groups; and a
-`model_alias` bound that drifts from `request_id`. The reusable questions are recorded in the
+removed or added canonical root fields; root and nested open objects; Python-only named groups; a
+`model_alias` bound that drifts from `request_id`; and previously unexercised nested request,
+completed-result, and failure rules. A separate assertion proves annotation and unordered-array
+edits retain the same fingerprint. The reusable questions are recorded in the
 [PR review checklist](../pr-review-checklist.md) so later reviews start with this evidence.
 
 ### 6. Every fixture must be accounted for
@@ -383,6 +421,14 @@ Planned ICGT-007 now preserves optional failure usage. ICGT-009 owns complete ad
 provider-neutral fake execution, including schema-valid `tool_calls` rejection with a zero-call test;
 ICGT-010 owns the first loopback-only endpoint and exhaustive wire outcome mapping.
 
+The next automated review found two remaining false assurances. First, selected invariant checks
+still allowed a nested bound or enum to redefine v1 when no fixture reached that edge. The semantic
+fingerprints now freeze every validation-affecting rule while leaving annotations and irrelevant
+ordering editable. Second, `read_bytes()` checked length only after allocating the whole file. The
+checker now reads at most `MAX_JSON_BYTES + 1`, and a recording-stream test verifies the underlying
+read request, one binary open, success exactly at the limit, and rejection one byte above it rather
+than merely observing the final error.
+
 No visual companion was created. The project policy now treats the Markdown lesson as the required
 learning artifact and visuals as optional. The governing ICGT-002 story was amended too, so the
 current rule does not conflict with an older Done acceptance criterion.
@@ -392,10 +438,12 @@ current rule does not conflict with an older Done acceptance criterion.
 - An unknown request field is silently ignored before a paid operation.
 - A valid fixture passes only because its schema used an unsupported keyword.
 - A valid fixture still passes after its schema ID, framing, or duplicated bound drifts.
+- A nested bound or enum changes without invalidating any current fixture or changing the version.
 - A Python-only regular expression is mistaken for a language-neutral JSON Schema pattern.
 - A nested object is opened even though the top-level object remains closed.
 - An invalid fixture fails, but not for the rule its manifest claims.
 - An oversized valid artifact is mistaken for normative malformed JSON.
+- A file-size guard measures an already-unbounded allocation instead of constraining the read.
 - A fractional usage count rounds into an integer at a large numeric boundary.
 - A Python test covers a portability trap that never reaches the shared client corpus.
 - A symlinked or escaping manifest path reads a file outside the contract corpus.
@@ -424,6 +472,7 @@ first live-provider cleanup evidence, and ICGT-020 later freezes the cross-repos
 - Add a temporary unknown field to the minimal request and predict the keyword and JSON Pointer.
 - Change an invalid manifest entry's expected keyword and explain why the checker must fail.
 - Temporarily broaden a framing `const` to an enum and confirm the canonical invariant check fails.
+- Increase `conversation.maxItems` without adding a fixture and confirm the semantic lock still fails.
 - Explain why `true` is not an integer even though Python's `bool` subclasses `int`.
 - Compare `unsupported_capability` with `unsupported_upstream_output` in terms of paid work.
 - Explain why an oversized valid fixture cannot prove a normative JSON parse rule.
@@ -436,6 +485,10 @@ first live-provider cleanup evidence, and ICGT-020 later freezes the cross-repos
 - Closed schemas turn unsupported fields into visible failures.
 - Fixtures are stronger when they name the exact rule they intend to prove.
 - Mutation tests distinguish example coverage from invariant coverage.
+- A complete semantic fingerprint backs up readable targeted checks without treating annotations or
+  harmless ordering as protocol changes.
+- Resource bounds must constrain the underlying operation before allocation, not inspect the result
+  afterward.
 - Exact pattern allowlists avoid overstating cross-language regex support.
 - Exact decimal handling matters for integer contracts near large bounds.
 - Cross-language hazards belong in the shared corpus, not only one implementation's tests.
@@ -452,6 +505,7 @@ first live-provider cleanup evidence, and ICGT-020 later freezes the cross-repos
 - **JSON Pointer:** a path such as `/usage/input_tokens` locating a value in a JSON document.
 - **Semantic loss:** meaning dropped or changed during translation.
 - **Mutation test:** a test that deliberately changes one protected rule and expects the gate to fail.
+- **Semantic fingerprint:** a digest of normalized validation meaning used to detect contract drift.
 - **Audited allowlist:** the complete, explicitly reviewed set of values a checker may execute.
 - **Pre-dispatch:** before provider work starts.
 - **Post-dispatch:** after provider work may already have started or become billable.
@@ -459,8 +513,8 @@ first live-provider cleanup evidence, and ICGT-020 later freezes the cross-repos
 ## Teach-back questions
 
 1. Why must the FastGate client contract be reviewed before ICGT-007 defines provider-domain types?
-2. Why can a valid v1 fixture keep passing after a schema invariant drifts, and how does a mutation
-   test close that gap?
+2. Why can a valid v1 fixture keep passing after a nested schema rule drifts, and how do the semantic
+   fingerprint and mutation tests close that gap without locking prose or ordering?
 3. Why are pre-dispatch unsupported capability and post-dispatch unsupported output separate error
    codes, and where may usage appear?
 

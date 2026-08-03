@@ -5,10 +5,12 @@ import importlib.util
 import io
 import json
 import re
+import shutil
 import tempfile
 import unittest
 from decimal import Decimal, InvalidOperation, localcontext
 from pathlib import Path
+from unittest import mock
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "check_contract.py"
@@ -97,10 +99,18 @@ class ContractCheckerTests(unittest.TestCase):
         self.failure_schema["properties"]["kind"]["const"] = "model_turn.failed"
         original_required_fields = CHECKER.CANONICAL_REQUIRED_FIELDS
         original_root_fields = CHECKER.CANONICAL_ROOT_FIELDS
+        original_schema_fingerprints = CHECKER.V1_SCHEMA_VALIDATION_FINGERPRINTS
         self.production_required_fields = original_required_fields
         self.production_root_fields = original_root_fields
+        self.production_schema_fingerprints = original_schema_fingerprints
         self.addCleanup(setattr, CHECKER, "CANONICAL_REQUIRED_FIELDS", original_required_fields)
         self.addCleanup(setattr, CHECKER, "CANONICAL_ROOT_FIELDS", original_root_fields)
+        self.addCleanup(
+            setattr,
+            CHECKER,
+            "V1_SCHEMA_VALIDATION_FINGERPRINTS",
+            original_schema_fingerprints,
+        )
         CHECKER.CANONICAL_REQUIRED_FIELDS = {
             CHECKER.REQUEST_SCHEMA: frozenset(self.schema["required"]),
             CHECKER.SUCCESS_SCHEMA: frozenset(self.success_schema["required"]),
@@ -110,6 +120,11 @@ class ContractCheckerTests(unittest.TestCase):
             CHECKER.REQUEST_SCHEMA: frozenset(self.schema["properties"]),
             CHECKER.SUCCESS_SCHEMA: frozenset(self.success_schema["properties"]),
             CHECKER.FAILURE_SCHEMA: frozenset(self.failure_schema["properties"]),
+        }
+        CHECKER.V1_SCHEMA_VALIDATION_FINGERPRINTS = {
+            CHECKER.REQUEST_SCHEMA: CHECKER.schema_validation_fingerprint(self.schema),
+            CHECKER.SUCCESS_SCHEMA: CHECKER.schema_validation_fingerprint(self.success_schema),
+            CHECKER.FAILURE_SCHEMA: CHECKER.schema_validation_fingerprint(self.failure_schema),
         }
         self.cases = {
             "version": "v1",
@@ -206,16 +221,22 @@ class ContractCheckerTests(unittest.TestCase):
     def check(self) -> list[str]:
         return CHECKER.check_contract(self.root)
 
-    def test_committed_contract_corpus_passes(self) -> None:
+    def check_with_production_schema_locks(self, root: Path) -> list[str]:
         temporary_required_fields = CHECKER.CANONICAL_REQUIRED_FIELDS
         temporary_root_fields = CHECKER.CANONICAL_ROOT_FIELDS
+        temporary_schema_fingerprints = CHECKER.V1_SCHEMA_VALIDATION_FINGERPRINTS
         CHECKER.CANONICAL_REQUIRED_FIELDS = self.production_required_fields
         CHECKER.CANONICAL_ROOT_FIELDS = self.production_root_fields
+        CHECKER.V1_SCHEMA_VALIDATION_FINGERPRINTS = self.production_schema_fingerprints
         try:
-            errors = CHECKER.check_contract(CHECKER.ROOT)
+            return CHECKER.check_contract(root)
         finally:
             CHECKER.CANONICAL_REQUIRED_FIELDS = temporary_required_fields
             CHECKER.CANONICAL_ROOT_FIELDS = temporary_root_fields
+            CHECKER.V1_SCHEMA_VALIDATION_FINGERPRINTS = temporary_schema_fingerprints
+
+    def test_committed_contract_corpus_passes(self) -> None:
+        errors = self.check_with_production_schema_locks(CHECKER.ROOT)
 
         self.assertEqual(errors, [])
 
@@ -440,6 +461,149 @@ class ContractCheckerTests(unittest.TestCase):
             errors,
         )
 
+    def test_canonical_schema_fingerprint_pins_nested_validation_rules(self) -> None:
+        self.assertEqual(
+            set(self.production_schema_fingerprints),
+            set(CHECKER.CANONICAL_SCHEMAS),
+        )
+        request = CHECKER.strict_json(
+            CHECKER.ROOT / CHECKER.CONTRACT_RELATIVE / CHECKER.REQUEST_SCHEMA
+        )
+        baseline = self.production_schema_fingerprints[CHECKER.REQUEST_SCHEMA]
+        request = dict(reversed(list(request.items())))
+        request["properties"] = dict(reversed(list(request["properties"].items())))
+        request["title"] = "Editorial title change"
+        request["required"].reverse()
+        conversation_items = request["properties"]["conversation"]["items"]
+        conversation_items["description"] = "Editorial nested description"
+        conversation_items["properties"]["role"]["enum"].reverse()
+        for spelling in (Decimal("64"), Decimal("64.0"), Decimal("6.4e1")):
+            request["properties"]["conversation"]["maxItems"] = spelling
+            self.assertEqual(CHECKER.schema_validation_fingerprint(request), baseline)
+
+        property_named_like_annotation = CHECKER.strict_json(
+            CHECKER.ROOT / CHECKER.CONTRACT_RELATIVE / CHECKER.REQUEST_SCHEMA
+        )
+        property_named_like_annotation["properties"]["conversation"]["items"][
+            "properties"
+        ]["description"] = {"type": "string"}
+        self.assertNotEqual(
+            CHECKER.schema_validation_fingerprint(property_named_like_annotation),
+            baseline,
+        )
+
+        enum_value_named_like_annotation = CHECKER.strict_json(
+            CHECKER.ROOT / CHECKER.CONTRACT_RELATIVE / CHECKER.REQUEST_SCHEMA
+        )
+        enum_value_named_like_annotation["properties"]["conversation"]["items"][
+            "properties"
+        ]["role"]["enum"].append("title")
+        self.assertNotEqual(
+            CHECKER.schema_validation_fingerprint(enum_value_named_like_annotation),
+            baseline,
+        )
+
+        cases = (
+            (
+                "request conversation bound",
+                CHECKER.REQUEST_SCHEMA,
+                lambda schema: schema["properties"]["conversation"].update({"maxItems": 65}),
+            ),
+            (
+                "request role enum",
+                CHECKER.REQUEST_SCHEMA,
+                lambda schema: schema["properties"]["conversation"]["items"][
+                    "properties"
+                ]["role"]["enum"].append("system"),
+            ),
+            (
+                "request nested required field",
+                CHECKER.REQUEST_SCHEMA,
+                lambda schema: schema["properties"]["conversation"]["items"][
+                    "required"
+                ].remove("content"),
+            ),
+            (
+                "success output bound",
+                CHECKER.SUCCESS_SCHEMA,
+                lambda schema: schema["properties"]["output_text"].update(
+                    {"maxLength": 65537}
+                ),
+            ),
+            (
+                "failure code enum",
+                CHECKER.FAILURE_SCHEMA,
+                lambda schema: schema["properties"]["error"]["properties"]["code"][
+                    "enum"
+                ].append("cancelled"),
+            ),
+            (
+                "failure message bound",
+                CHECKER.FAILURE_SCHEMA,
+                lambda schema: schema["properties"]["error"]["properties"][
+                    "message"
+                ].update({"maxLength": 1025}),
+            ),
+        )
+        for index, (name, relative, mutate) in enumerate(cases):
+            with self.subTest(name=name):
+                case_root = self.root / f"schema-fingerprint-{index}"
+                copied_contract = case_root / CHECKER.CONTRACT_RELATIVE
+                shutil.copytree(
+                    CHECKER.ROOT / CHECKER.CONTRACT_RELATIVE,
+                    copied_contract,
+                )
+                schema_path = copied_contract / relative
+                schema = json.loads(schema_path.read_text(encoding="utf-8"))
+                mutate(schema)
+                self.write_json(schema_path, schema)
+
+                errors = self.check_with_production_schema_locks(case_root)
+
+                self.assertEqual(
+                    errors,
+                    [f"schema {relative}: validation rules must match the frozen v1 contract"],
+                )
+
+    def test_validation_fingerprint_inventory_and_values_cannot_disable_lock(self) -> None:
+        inventory_error = (
+            "contract schemas: v1 validation fingerprint inventory must match canonical schemas"
+        )
+        request_error = (
+            f"schema {CHECKER.REQUEST_SCHEMA}: validation rules must match the frozen v1 contract"
+        )
+        original = CHECKER.V1_SCHEMA_VALIDATION_FINGERPRINTS
+        cases = (
+            (
+                "missing",
+                {
+                    path: fingerprint
+                    for path, fingerprint in original.items()
+                    if path != CHECKER.FAILURE_SCHEMA
+                },
+                inventory_error,
+            ),
+            (
+                "extra",
+                {**original, Path("schema/extra.schema.json"): "unexpected"},
+                inventory_error,
+            ),
+            (
+                "non-fingerprint value",
+                {**original, CHECKER.REQUEST_SCHEMA: None},
+                request_error,
+            ),
+        )
+        for name, fingerprints, expected_error in cases:
+            with self.subTest(name=name):
+                CHECKER.V1_SCHEMA_VALIDATION_FINGERPRINTS = fingerprints
+                try:
+                    errors = self.check()
+                finally:
+                    CHECKER.V1_SCHEMA_VALIDATION_FINGERPRINTS = original
+
+                self.assertIn(expected_error, errors)
+
     def test_canonical_schema_non_object_root_fails_without_traceback(self) -> None:
         self.write_json(
             self.schema_path,
@@ -556,6 +720,44 @@ class ContractCheckerTests(unittest.TestCase):
         malformed.write_text('{"field": "\\ud83d\\ude00"}\n', encoding="utf-8")
         document = CHECKER.strict_json(malformed)
         self.assertEqual(document["field"], "😀")
+
+    def test_strict_json_bounds_the_underlying_read_before_allocation(self) -> None:
+        class RecordingStream:
+            def __init__(self, payload: bytes) -> None:
+                self.payload = payload
+                self.requested_sizes: list[int] = []
+
+            def __enter__(self) -> RecordingStream:
+                return self
+
+            def __exit__(self, *_args: object) -> None:
+                return None
+
+            def read(self, size: int = -1) -> bytes:
+                self.requested_sizes.append(size)
+                if size < 0 or size > CHECKER.MAX_JSON_BYTES + 1:
+                    raise AssertionError("strict_json requested an unbounded read")
+                return self.payload[:size]
+
+        exact_limit = RecordingStream(
+            b"{}" + b" " * (CHECKER.MAX_JSON_BYTES - 2)
+        )
+        with mock.patch.object(Path, "open", return_value=exact_limit) as open_exact:
+            document = CHECKER.strict_json(Path("exact-limit.json"))
+
+        self.assertEqual(document, {})
+        self.assertEqual(exact_limit.requested_sizes, [CHECKER.MAX_JSON_BYTES + 1])
+        open_exact.assert_called_once_with("rb")
+
+        oversized = RecordingStream(b"x" * (CHECKER.MAX_JSON_BYTES + 1))
+        with mock.patch.object(Path, "open", return_value=oversized) as open_oversized:
+            with self.assertRaises(CHECKER.JSONArtifactError) as caught:
+                CHECKER.strict_json(Path("oversized.json"))
+
+        self.assertIs(type(caught.exception), CHECKER.JSONArtifactError)
+        self.assertEqual(str(caught.exception), "JSON document exceeds the checker size limit")
+        self.assertEqual(oversized.requested_sizes, [CHECKER.MAX_JSON_BYTES + 1])
+        open_oversized.assert_called_once_with("rb")
 
     def test_exact_decimal_preserves_integer_and_maximum_semantics(self) -> None:
         fraction = Decimal("9007199254740990.5")

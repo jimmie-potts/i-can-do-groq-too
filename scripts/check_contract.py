@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import os
@@ -43,6 +44,11 @@ CANONICAL_ROOT_FIELDS = {
     SUCCESS_SCHEMA: CANONICAL_REQUIRED_FIELDS[SUCCESS_SCHEMA] | {"usage"},
     FAILURE_SCHEMA: CANONICAL_REQUIRED_FIELDS[FAILURE_SCHEMA] | {"usage"},
 }
+V1_SCHEMA_VALIDATION_FINGERPRINTS = {
+    REQUEST_SCHEMA: "e08098dd1c8ef35c63b177720145caeb927304added8ec5b9e993c49bbcd0fb9",
+    SUCCESS_SCHEMA: "31d2b6f7892a4b67c7122bace115d2614535f1e3745a4f3905d27f7c164d73f1",
+    FAILURE_SCHEMA: "1be52b33e19688e818175dc8ae4e336be9fb6ba56e5f0d7885864d6913856686",
+}
 CANONICAL_SCHEMAS = tuple(CANONICAL_SCHEMA_METADATA)
 SCHEMA_URI = "https://json-schema.org/draft/2020-12/schema"
 MAX_JSON_BYTES = 1_000_000
@@ -64,6 +70,8 @@ SUPPORTED_KEYWORDS = {
     "minimum", "maximum", "enum", "const", "pattern",
 }
 JSON_TYPES = {"object", "array", "string", "integer", "number", "boolean", "null"}
+SCHEMA_ANNOTATIONS = frozenset({"title", "description"})
+SCHEMA_UNORDERED_ARRAYS = frozenset({"required", "enum"})
 
 
 class JSONDocumentError(ValueError):
@@ -84,7 +92,8 @@ class Violation(NamedTuple):
 def strict_json(path: Path) -> Any:
     """Load bounded strict JSON with unique keys, exact numbers, and Unicode scalars."""
     try:
-        raw = path.read_bytes()
+        with path.open("rb") as source:
+            raw = source.read(MAX_JSON_BYTES + 1)
     except OSError as error:
         raise JSONArtifactError("unable to read JSON document") from error
     if len(raw) > MAX_JSON_BYTES:
@@ -195,6 +204,64 @@ def pointer_join(base: str, token: str | int) -> str:
     """Append one escaped token to an RFC 6901 JSON pointer."""
     escaped = str(token).replace("~", "~0").replace("/", "~1")
     return f"{base}/{escaped}"
+
+
+def schema_validation_fingerprint(schema: dict[str, Any]) -> str:
+    """Fingerprint all validation-affecting schema content, excluding annotations."""
+
+    def number_key(value: int | Decimal) -> str:
+        decimal = value if isinstance(value, Decimal) else Decimal(value)
+        if decimal == 0:
+            return "0"
+        sign, digits_tuple, exponent = decimal.as_tuple()
+        digits = list(digits_tuple)
+        while digits and digits[-1] == 0:
+            digits.pop()
+            exponent += 1
+        return f"{sign}:{''.join(str(digit) for digit in digits)}:{exponent}"
+
+    def encode(value: Any, *, schema_node: bool = False) -> Any:
+        if isinstance(value, dict):
+            entries: list[list[Any]] = []
+            for key in sorted(value):
+                if schema_node and key in SCHEMA_ANNOTATIONS:
+                    continue
+                child = value[key]
+                if schema_node and key == "properties":
+                    encoded = [
+                        "object",
+                        [[name, encode(child[name], schema_node=True)] for name in sorted(child)],
+                    ]
+                elif schema_node and key == "items":
+                    encoded = encode(child, schema_node=True)
+                elif schema_node and key in SCHEMA_UNORDERED_ARRAYS:
+                    encoded_items = [encode(item) for item in child]
+                    encoded_items.sort(
+                        key=lambda item: json.dumps(
+                            item, ensure_ascii=True, separators=(",", ":")
+                        )
+                    )
+                    encoded = ["array", encoded_items]
+                else:
+                    encoded = encode(child)
+                entries.append([key, encoded])
+            return ["object", entries]
+        if isinstance(value, list):
+            return ["array", [encode(item) for item in value]]
+        if isinstance(value, str):
+            return ["string", value]
+        if isinstance(value, bool):
+            return ["boolean", value]
+        if isinstance(value, (int, Decimal)):
+            return ["number", number_key(value)]
+        if value is None:
+            return ["null"]
+        raise TypeError(f"unsupported schema value type: {type(value).__name__}")
+
+    canonical = json.dumps(
+        encode(schema, schema_node=True), ensure_ascii=True, separators=(",", ":")
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def schema_issues(schema: Any) -> list[str]:
@@ -446,7 +513,12 @@ def check_canonical_schema_invariants(
     schemas: dict[Path, dict[str, Any] | None],
     errors: list[str],
 ) -> None:
-    """Pin each canonical file to one unique identity and exact document framing."""
+    """Pin each canonical file to its complete v1 contract and readable framing rules."""
+    if set(V1_SCHEMA_VALIDATION_FINGERPRINTS) != set(CANONICAL_SCHEMA_METADATA):
+        errors.append(
+            "contract schemas: v1 validation fingerprint inventory must match canonical schemas"
+        )
+
     loaded: list[tuple[Path, dict[str, Any], str, str]] = []
     for relative, (expected_id, expected_kind) in CANONICAL_SCHEMA_METADATA.items():
         schema = schemas.get(contract / relative)
@@ -461,6 +533,11 @@ def check_canonical_schema_invariants(
     for relative, schema, expected_id, expected_kind in loaded:
         if schema["$id"] != expected_id:
             errors.append(f"schema {relative}: $id must be {expected_id!r}")
+        expected_fingerprint = V1_SCHEMA_VALIDATION_FINGERPRINTS.get(relative)
+        if schema_validation_fingerprint(schema) != expected_fingerprint:
+            errors.append(
+                f"schema {relative}: validation rules must match the frozen v1 contract"
+            )
         required = schema.get("required")
         properties = schema.get("properties")
         if (

@@ -44,6 +44,23 @@ wrong document even while all example instances still pass.
 Why: a fixture containing the current values does not stop a schema author from silently turning an
 exact v1 document into a negotiable family.
 
+### Complete version lock
+
+- Does an independently anchored snapshot or semantic fingerprint include every
+  validation-affecting schema value, including nested types, bounds, properties, patterns,
+  constants, and enums?
+- Does it exclude annotations contextually, so a schema annotation may change without accidentally
+  ignoring a property or enum value that happens to be named `description` or `title`?
+- Does it normalize only semantically unordered data such as object keys, `required`, and `enum`,
+  rather than treating editorial reordering as a contract change?
+- Do representative mutations change an unexercised nested rule in every canonical schema while
+  keeping existing fixtures valid?
+- Would updating a frozen v1 fingerprint be reviewed as a public-contract change rather than
+  routine test maintenance?
+
+Why: selected field checks and happy-path fixtures can both remain green after an unexercised nested
+bound or enum silently changes the meaning of an already-published version.
+
 ### Closed objects
 
 - Does every object schema require `additionalProperties` to be exactly `false`?
@@ -90,6 +107,10 @@ validation established more than it actually did.
 
 - Can a checker I/O, file-size, path, nesting, numeric-range, or other implementation-limit failure
   accidentally satisfy a fixture that expects malformed protocol JSON?
+- Does a byte limit constrain the underlying read before allocation—for example, by requesting at
+  most `limit + 1`—instead of measuring an already-unbounded buffer?
+- Does a mechanism-level test record requested and cumulative bytes rather than proving only the
+  eventual oversized-file error?
 - Are artifact failures reported separately from normative parse or schema violations?
 - Do tests assert the exact failure class where one category subclasses another, rather than using
   a broad assertion that would accept either category?
@@ -98,6 +119,19 @@ validation established more than it actually did.
 
 Why: an operational guard proves only that the local checker refused an artifact. It must not become
 evidence that another implementation should reject the document for the manifest's protocol rule.
+
+### Static path policy versus atomic safety
+
+- Does documentation distinguish rejecting symlinks in a stable repository snapshot from atomically
+  preventing a concurrent path replacement?
+- If concurrent mutation is outside the threat model, do resource limits still hold for the file
+  actually opened?
+- Does one opened descriptor own the bounded read, rather than a separate size check followed by an
+  unbounded reopen?
+
+Why: a pre-open path check can express repository policy without being race-proof. Overstating that
+guarantee hides the real assumption, while a descriptor-bound limit still protects the checker from
+an unexpectedly large target.
 
 ### Shared cross-language boundary cases
 
@@ -197,11 +231,15 @@ fixes and executable evidence live in:
 
 The current regression mutations cover mistyped, wrong-version, and duplicate schema IDs;
 broadened or optional document framing; removed or added canonical root fields; root and nested open
-objects; Python-only named-group syntax; `model_alias` bound drift; a canonical non-object root that
-must fail without a traceback; and oversized or deeply nested valid artifacts that must not satisfy
-a normative JSON-failure expectation. Strict-parser tests require the exact normative error class
-for duplicate keys, non-finite spellings, lone surrogates, invalid syntax, and invalid UTF-8, so the
-artifact-error subclass cannot accidentally satisfy them. Shared fixtures now preserve the exact-
-number and escaped-surrogate-pair portability cases, including the pair's source escape spelling.
-The remaining checks are durable review questions because their evidence spans mapping and story
+objects; Python-only named-group syntax; `model_alias` bound drift; and a canonical non-object root
+that must fail without a traceback. A complete semantic fingerprint additionally catches an
+unexercised request bound, completed-output bound, and failure-code enum while ignoring annotations
+and semantically irrelevant ordering. Oversized or deeply nested valid artifacts cannot satisfy a
+normative JSON-failure expectation, and a recording stream proves the byte guard bounds the
+underlying read before allocation, opens once, accepts the exact limit, and rejects one extra byte.
+Strict-parser tests require the exact normative error class for
+duplicate keys, non-finite spellings, lone surrogates, invalid syntax, and invalid UTF-8, so the
+artifact-error subclass cannot accidentally satisfy them. Shared fixtures preserve the exact-number
+and escaped-surrogate-pair portability cases, including the pair's source escape spelling. The
+remaining checks are durable review questions because their evidence spans mapping and story
 documents rather than one executable unit.

@@ -61,10 +61,11 @@ It rejects unsupported or malformed schema keywords, validates every manifest ca
 invalid fixture to include its intended keyword and JSON Pointer, rejects escaping or noncanonical
 paths, rejects symlinks and duplicates, and reports orphaned fixture files. It also pins exact unique
 schema IDs, root property/required sets, constant framing, recursively closed objects, two explicitly
-audited patterns, a 64-entry enum cap, and duplicated identifier rules. Diagnostics name rules and
-bounded escaped paths without echoing fixture values.
+audited patterns, a 64-entry enum cap, duplicated identifier rules, and a complete semantic
+fingerprint of every validation-affecting v1 schema value. Diagnostics name rules and bounded
+escaped paths without echoing fixture values.
 
-The reviewed checker is 637 nonblank lines, above the story's roughly-400-line review heuristic. The
+The reviewed checker is 708 nonblank lines, above the story's roughly-400-line review heuristic. The
 extra scope was not speculative behavior: final review showed that Unicode-scalar parsing,
 canonical-schema inventory, cross-schema parity, and complete valid/invalid coverage were required
 for the existing conformance claim to be true. Deferring those checks would leave a false green
@@ -143,12 +144,27 @@ test review also replaced a broad superclass assertion with exact normative-erro
 duplicate keys, non-finite spellings, lone surrogates, invalid syntax, and invalid UTF-8; otherwise a
 future artifact-error regression could still leave that unit test green.
 
+The next review found that selected invariants were still incomplete: increasing
+`conversation.maxItems` without reaching 65 items left every fixture and check green. The checker now
+holds one independently reviewed fingerprint for each canonical schema's complete validation meaning.
+Its canonical form excludes only schema-node `title`/`description`, normalizes exact numbers, and
+treats object keys plus `required`/`enum` order as semantically unordered. Mutations of a nested
+request bound, completed-output bound, and failure-code enum now fail without making editorial
+annotation or ordering changes look like new versions.
+
+The same review showed that the one-megabyte guard used `read_bytes()` and therefore measured size
+only after allocating the entire artifact. `strict_json()` now opens once and reads at most
+`MAX_JSON_BYTES + 1`; a recording stream asserts the single bounded open, success at the exact limit,
+and rejection one byte above it. Static symlink rejection continues to assume a stable checkout and
+is not described as atomic race protection, while the descriptor-bound read preserves the allocation
+cap even if another process replaces a path.
+
 ## Validation evidence
 
 - `python3 scripts/check_contract.py` accepted all 8 valid fixtures and rejected all 18 invalid
   fixtures for their recorded outcomes.
-- `python3 -m unittest tests.test_check_contract` passed all 32 focused checker tests.
-- `python3 -m unittest discover -s tests -p 'test_*.py'` passed all 49 Python tests.
+- `python3 -m unittest tests.test_check_contract` passed all 35 focused checker tests.
+- `python3 -m unittest discover -s tests -p 'test_*.py'` passed all 52 Python tests.
 - An independently installed Draft 2020-12 validator with exact-decimal JSON decoding matched all 23
   schema-governed fixture classifications. With default binary-float decoding, its sole mismatch was
   the fractional usage case because the source number rounded before schema validation. The three

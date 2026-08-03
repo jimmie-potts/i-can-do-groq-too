@@ -28,14 +28,28 @@ its scalar while a lone surrogate is rejected. Numbers are compared by their exa
 value: booleans are not integers, an integral decimal such as `1.0` is an integer, and a fractional
 decimal remains fractional even near a large bound.
 
-The checker's one-megabyte per-file read limit, 128-level decoded nesting limit, and exact-decimal
-implementation range protect the offline repository gate. They are artifact guards, not model-turn
-v1 rules or future HTTP admission limits. A syntactically valid document refused by any guard cannot
-count as a normative `json` fixture failure.
+The checker opens each file once and requests at most 1,000,001 bytes: the one-megabyte limit plus
+one byte that proves the artifact is oversized. It rejects that extra byte before decoding, so the
+limit constrains the underlying allocation instead of measuring an already-unbounded read. That
+limit, the 128-level decoded nesting limit, and the exact-decimal implementation range protect the
+offline repository gate. They are artifact guards, not model-turn v1 rules or future HTTP admission
+limits. A syntactically valid document refused by any guard cannot count as a normative `json`
+fixture failure.
 
-The offline checker also pins each canonical file to its exact unique schema ID, exact root property
-and required-field sets, exact `version` and `kind`, closed-object policy, and deliberately duplicated
-identifier rules. It executes only the two committed, precompiled schema `pattern` expressions for
+Manifest path checks reject committed symlinks and escapes in a stable checkout. They are a static
+repository policy, not an atomic defense against another process replacing paths during the check.
+The single-descriptor bounded read still preserves the memory limit if a concurrent replacement
+occurs; the offline gate otherwise assumes its checkout is not being mutated while it runs.
+
+The offline checker fingerprints every validation-affecting value in each canonical schema. It
+normalizes parsed object order, the semantically unordered `required` and `enum` arrays, and equal
+number spellings, while excluding only schema-node `title` and `description` annotations. Therefore
+changing any nested type, property, bound, pattern, constant, or enum fails the frozen v1 lock even
+when every current fixture still passes. The existing exact ID, root framing, closed-object, and
+duplicated-rule checks remain because they provide more readable diagnostics than a fingerprint
+alone.
+
+The checker executes only the two committed, precompiled schema `pattern` expressions for
 identifiers and control-safe strings. That exact audited allowlist prevents the Python checker from
 accepting a pattern that a language-neutral JSON Schema consumer may interpret differently; adding
 another pattern requires an explicit portability review and checker change.

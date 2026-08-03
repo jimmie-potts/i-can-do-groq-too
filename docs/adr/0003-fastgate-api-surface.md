@@ -144,14 +144,16 @@ cannot represent, from text-first failure usage that the later stream profile ma
 ## Evidence staging
 
 - ICGT-006 owns the compatibility/gap matrix, selected non-streaming v1 schema, and valid/invalid
-  language-neutral fixtures plus their offline gate validation.
+  language-neutral fixtures plus their offline gate validation. Its three code-side semantic
+  fingerprints prevent validation-affecting v1 schema drift while ignoring annotations and
+  semantically irrelevant ordering; they are internal review guards, not release-package digests.
 - Later SSE, cancellation, and cleanup stories extend the fixture corpus only after they can prove
   those behaviors.
 - ICGT-020 pins an adapter-ready harness contract snapshot and turns implemented FastGate behavior,
   transport policy, and exact schema/fixture source artifacts into a candidate cross-repository
   handoff profile.
-- ICGT-021 packages and validates those frozen artifacts, records a manifest/digest, and cannot
-  change semantics without a new contract version.
+- ICGT-021 packages and validates those frozen artifacts, records a byte-level release
+  manifest/digest, and cannot change semantics without a new contract version.
 - A later Code Assist Harness story owns `FastGateProvider`, accepts the client side of the profile,
   pins that manifest/digest, and runs harness-side conformance tests before the handoff is jointly
   accepted.
