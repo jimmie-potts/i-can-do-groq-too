@@ -1,0 +1,10 @@
+{
+  "version": "v1",
+  "kind": "model_turn.completed",
+  "request_id": "req-usage-overflow",
+  "output_text": "Usage is bounded.",
+  "usage": {
+    "input_tokens": 1,
+    "output_tokens": 9007199254740992
+  }
+}

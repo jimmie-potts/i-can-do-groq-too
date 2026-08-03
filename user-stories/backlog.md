@@ -15,13 +15,16 @@ implementation. The detailed dependency-ready sequence lives in [README.md](READ
 - Reviewed FastGate-owned model-turn v1 schema and fixtures before provider-domain code.
 - FastGate-owned provider contracts.
 - Basic deterministic fake upstream, followed later by streaming/cancellation controls.
-- One non-streaming FastGate model-turn request and normalized failure path.
+- Complete bounded pre-dispatch model-turn admission, including schema-valid `tool_calls` rejection
+  with deterministic zero-dispatch evidence, followed by one loopback-only fake-backed endpoint that
+  exhaustively maps completed and failed provider outcomes.
 
 ## M2 - FastGate streaming reliability
 
 - FastGate-owned model-turn SSE grammar and fake streaming.
 - Client cancellation and upstream cleanup.
-- Upstream deadline and cleanup grace.
+- Upstream deadline, cleanup grace, and bounded FastGate-local reaping that never proves remote
+  termination.
 - Slow-client backpressure bounds.
 - TTFT, duration, active request, queue, cancellation, failure, and usage metrics.
 
@@ -37,10 +40,11 @@ implementation. The detailed dependency-ready sequence lives in [README.md](READ
   semantic changes require a new version and handoff review.
 - A separate Code Assist Harness-owned FastGate adapter; do not reuse the direct OpenAI adapter or
   `OPENAI_BASE_URL`.
-- Trusted endpoint/authentication, TLS, proxy, redirect, and confirmed-versus-unconfirmed upstream
-  cleanup policy in the handoff.
+- An explicit loopback-only, unauthenticated, no-TLS first handoff with endpoint/proxy/redirect and
+  confirmed-versus-unconfirmed cleanup policy; authentication/TLS waits for a later implemented and
+  reviewed non-loopback profile.
 - Groq adapter for limited, evaluated tasks.
-- Capability-aware rejection, emulation, or routing.
+- Capability discovery, support, emulation, and routing beyond the mandatory v1 rejection.
 
 ## M4 - LatencyLab
 

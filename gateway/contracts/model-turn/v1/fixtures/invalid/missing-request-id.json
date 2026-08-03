@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "kind": "model_turn.request",
+  "model_alias": "learning-text",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Correlation is required."
+    }
+  ],
+  "instructions": [],
+  "required_capabilities": []
+}

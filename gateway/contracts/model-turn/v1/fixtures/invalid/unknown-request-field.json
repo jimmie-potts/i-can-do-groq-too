@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "kind": "model_turn.request",
+  "request_id": "req-unknown-field",
+  "model_alias": "learning-text",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Reject silent extensions."
+    }
+  ],
+  "instructions": [],
+  "required_capabilities": [],
+  "temperature": 0.2
+}

@@ -1,0 +1,10 @@
+{
+  "version": "v1",
+  "kind": "model_turn.failed",
+  "request_id": "req-numeric-retryable",
+  "error": {
+    "code": "unavailable",
+    "message": "The selected route is unavailable.",
+    "retryable": 1
+  }
+}

@@ -75,10 +75,12 @@ claim Chat Completions or Responses compatibility, and the first endpoint will n
 formats as aliases. A future compatibility facade requires its own client need, contract fixtures,
 and reviewed story or ADR.
 
-The exact v1 fields, bounds, errors, unknown-field policy, and versioning mechanics remain work for
-ICGT-006. The transport endpoint path and binding belong to ICGT-009. Accepting this architectural
-direction does not claim that a schema, endpoint, streaming implementation, cancellation behavior,
-or runtime conformance exists.
+ICGT-006 materializes the exact v1 fields, bounds, normalized-error meanings, strict JSON parse
+profile, unknown-field policy, base/extension versioning mechanics, mapping, fixtures, and offline
+artifact validation. Bounded transport/body admission and provider-neutral execution belong to
+ICGT-009; endpoint path, binding, and complete provider-outcome mapping belong to ICGT-010. The accepted
+direction and committed schema still do not claim that an endpoint, streaming implementation,
+cancellation behavior, or runtime conformance exists.
 
 ## Rationale
 
@@ -110,15 +112,19 @@ ICGT-006 must turn this accepted direction into a reviewable non-streaming v1 co
 public inference endpoint or provider-domain contract depends on it:
 
 1. Map the selected protocol, field by field, to the current harness's ordered conversation,
-   ordered repository instructions, text and provider-emitted tool events, optional non-authoritative
-   usage, normalized failures, exactly-one terminal behavior, cancellation, and cleanup contract.
+   repository guidance translated into generic ordered instruction blocks, text and provider-emitted
+   tool events, optional non-authoritative usage, normalized failures, lazy operation start,
+   single-consumer event claim, exactly-one terminal behavior, cancellation with its
+   `cancelled`/`already_closed` outcomes, ordinary cleanup, and forced local cleanup contract.
 2. Classify each semantic as exact, lossy, explicitly unsupported, or deferred. Any required loss
    blocks ICGT-006 completion unless the schema preserves it, a named versioned extension owns it,
    or a later ADR changes the direction.
-3. Represent cancellation, no-later-event behavior, local resource closure, and confirmed versus
-   unconfirmed upstream cleanup without claiming they are implemented.
-4. Specify how future client-declared unsupported capabilities are rejected before paid work, while
-   unsolicited unsupported upstream output becomes an honest bounded post-dispatch failure.
+3. Represent cancellation, no-later-event behavior, local resource closure, idempotent forced local
+   reaping, and confirmed versus unconfirmed upstream cleanup without claiming they are implemented
+   or that local closure proves remote termination.
+4. Assign client-declared unsupported-capability rejection to the pre-dispatch admission story before
+   paid work, with deterministic no-dispatch evidence, while unsolicited unsupported upstream output
+   becomes an honest bounded post-dispatch failure in the endpoint story.
 5. Keep provider/model routing gateway-owned without leaking vendor fields into the harness request
    contract.
 6. State the exact FastGate protocol compatibility claim that schema validation and contract tests
@@ -130,19 +136,27 @@ public inference endpoint or provider-domain contract depends on it:
    code.
 10. Keep the first unit small enough for personal review.
 
+The mapping must remain honest when one client is narrower than the provider-neutral base contract.
+In particular, it records current CAH terminal-text restrictions as a lossy client mapping rather
+than narrowing FastGate for every client. It also separates no-text failure usage, which current CAH
+cannot represent, from text-first failure usage that the later stream profile may preserve.
+
 ## Evidence staging
 
 - ICGT-006 owns the compatibility/gap matrix, selected non-streaming v1 schema, and valid/invalid
-  language-neutral fixtures plus their offline gate validation.
+  language-neutral fixtures plus their offline gate validation. Its three code-side semantic
+  fingerprints prevent validation-affecting v1 schema drift while ignoring annotations and
+  semantically irrelevant ordering; they are internal review guards, not release-package digests.
 - Later SSE, cancellation, and cleanup stories extend the fixture corpus only after they can prove
   those behaviors.
 - ICGT-020 pins an adapter-ready harness contract snapshot and turns implemented FastGate behavior,
-  transport policy, and exact schema/fixture source artifacts into the jointly reviewed
-  cross-repository handoff.
-- ICGT-021 packages and validates those frozen artifacts, records a manifest/digest, and cannot
-  change semantics without a new contract version.
+  transport policy, and exact schema/fixture source artifacts into a candidate cross-repository
+  handoff profile.
+- ICGT-021 packages and validates those frozen artifacts, records a byte-level release
+  manifest/digest, and cannot change semantics without a new contract version.
 - A later Code Assist Harness story owns `FastGateProvider`, accepts the client side of the profile,
-  pins that manifest/digest, and runs harness-side conformance tests.
+  pins that manifest/digest, and runs harness-side conformance tests before the handoff is jointly
+  accepted.
 
 ## Consequences and sequencing
 

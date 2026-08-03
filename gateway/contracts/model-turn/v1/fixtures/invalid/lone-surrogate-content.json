@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "kind": "model_turn.request",
+  "request_id": "req-lone-surrogate",
+  "model_alias": "learning-text",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "\ud800"
+    }
+  ],
+  "instructions": [],
+  "required_capabilities": []
+}

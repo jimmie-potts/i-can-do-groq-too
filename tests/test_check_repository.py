@@ -441,9 +441,17 @@ Example.
     def test_critical_foundation_artifacts_are_required(self) -> None:
         for relative_path in (
             ".github/workflows/check.yml",
+            "scripts/check_contract.py",
+            "tests/test_check_contract.py",
             "tests/test_check_repository.py",
             "docs/lessons/AGENTS.md",
             "user-stories/AGENTS.md",
+            "gateway/contracts/model-turn/v1/README.md",
+            "gateway/contracts/model-turn/v1/harness-mapping.md",
+            "gateway/contracts/model-turn/v1/schema/request.schema.json",
+            "gateway/contracts/model-turn/v1/schema/success.schema.json",
+            "gateway/contracts/model-turn/v1/schema/failure.schema.json",
+            "gateway/contracts/model-turn/v1/fixtures/cases.json",
             "gateway/cmd/fastgate/main.go",
             "gateway/internal/service/service.go",
             "gateway/internal/service/service_test.go",

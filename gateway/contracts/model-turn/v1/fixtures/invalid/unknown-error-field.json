@@ -1,0 +1,11 @@
+{
+  "version": "v1",
+  "kind": "model_turn.failed",
+  "request_id": "req-unknown-error-field",
+  "error": {
+    "code": "internal_error",
+    "message": "The request failed.",
+    "retryable": false,
+    "provider_body": "must not cross the boundary"
+  }
+}

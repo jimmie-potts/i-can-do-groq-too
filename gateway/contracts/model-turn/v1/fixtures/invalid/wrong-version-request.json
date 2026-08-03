@@ -1,0 +1,14 @@
+{
+  "version": "v2",
+  "kind": "model_turn.request",
+  "request_id": "req-wrong-version",
+  "model_alias": "learning-text",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Reject the wrong version."
+    }
+  ],
+  "instructions": [],
+  "required_capabilities": []
+}

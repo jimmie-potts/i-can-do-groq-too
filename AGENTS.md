@@ -4,8 +4,8 @@
 
 I Can Do Groq Too is a learning-first inference infrastructure monorepo. The intended components are
 FastGate, LatencyLab, ModelEndpoint Operator, TenantPlane, and FleetSim. The repository currently
-implements the root Go module and FastGate lifecycle foundation only. Provider inference behavior
-and the other services remain planned; do not describe them as implemented.
+implements the root Go module, FastGate lifecycle, and model-turn v1 contract tooling. Provider
+inference behavior and the other services remain planned; do not describe them as implemented.
 
 `code-assist-harness` is a separate repository and client. It owns coding workflow state, tools,
 approvals, audit records, transcripts, and correctness evaluation. This repository owns
@@ -46,7 +46,9 @@ After implementation:
 1. Summarize the important control flow and ownership decisions.
 2. Identify the small set of production and test files the user should review personally.
 3. Run focused tests and `./scripts/check`.
-4. Run a separate review focused on correctness, concurrency, cleanup, security, and missing tests.
+4. Read and apply `docs/pr-review-checklist.md`, then run a separate review focused on correctness,
+   concurrency, cleanup, security, and missing tests. Add a concise evidence-backed checklist entry
+   when review exposes a reusable missed-case class.
 5. Update the linked lesson with exact source-backed examples, observed trade-offs, validation, and
    three teach-back questions.
 
@@ -65,8 +67,9 @@ the hand-written ownership and validation rules remain easy to inspect.
 
 ## Lesson requirements
 
-Every implementation-ready story has exactly one Markdown companion under `docs/lessons/`. Planned
-lessons must label pseudocode and future paths honestly. A completed code-bearing lesson must:
+Every implementation-ready story has exactly one source-backed Markdown companion under
+`docs/lessons/`. Planned lessons must label pseudocode and future paths honestly. A completed
+code-bearing lesson must:
 
 - link the exact important source and test paths;
 - show focused excerpts for the happy path and one meaningful failure path;
@@ -75,10 +78,11 @@ lessons must label pseudocode and future paths honestly. A completed code-bearin
 - record what failed or changed during implementation; and
 - end with exercises, takeaways, glossary terms, and teach-back questions.
 
-High-review-priority code-bearing stories also receive a visual companion under
-`docs/lessons/assets/`. Create the deck only after code and written evidence are stable, then render
-and inspect it before treating it as completion evidence. Documentation-only foundation stories do
-not require a deck unless a visual materially improves the decision review.
+Visual companions are optional supporting artifacts and are never required for a story to be Done.
+Create one only when the user explicitly requests it or a separately reviewed justification explains
+how the visual materially improves understanding. When a visual is selected, create it only after
+code and written evidence are stable, then render and inspect it before treating the visual itself as
+verified. Preserve existing verified visuals as historical unit evidence.
 
 ## Go conventions
 

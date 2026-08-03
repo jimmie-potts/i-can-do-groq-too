@@ -8,11 +8,12 @@ current implementation status.
 
 ## Current implementation slice
 
-ICGT-005 implements the repository-root Go module and the first FastGate process lifecycle. The
-process validates bounded HTTP settings, serves `GET /healthz`, and owns graceful shutdown through
-the final server join. This operational route reports only that the local process is serving. The
-model-turn schema, inference transport endpoint, provider port, fake upstream, and every live
-provider remain deferred to their owning stories.
+ICGT-005 implements the repository-root Go module and the first FastGate process lifecycle. ICGT-006
+implements the strict, non-streaming model-turn v1 schemas, language-neutral fixture corpus,
+harness-semantic mapping, and offline artifact validator. The process still serves only
+`GET /healthz`; the committed contract tooling is not wired to HTTP. The inference transport
+endpoint, provider port, fake upstream, and every live provider remain deferred to their owning
+stories.
 
 ## System context
 
@@ -81,9 +82,10 @@ The current harness provider port already expresses the essential seam:
 - no provider SDK values in harness state.
 
 That port should not be redesigned for FastGate now. The CAH-023 direct OpenAI adapter remains the
-direct baseline. This repository later publishes a versioned FastGate wire contract and conformance
-bundle. A separate Code Assist Harness story owns the client adapter rather than this repository
-writing harness code or masquerading as the official OpenAI endpoint.
+direct baseline. ICGT-006 commits the model-turn v1 schema and fixture source; ICGT-020 and ICGT-021
+later freeze and package the adapter-ready conformance bundle. A separate Code Assist Harness story
+owns the client adapter rather than this repository writing harness code or masquerading as the
+official OpenAI endpoint.
 
 ```text
 Harness Provider implementations
@@ -135,29 +137,40 @@ The repositories share protocol artifacts, not internal source packages:
 | `FastGateProvider` mapping and harness-port compliance | Code Assist Harness | A future CAH-owned story pins the FastGate contract and runs harness-side conformance tests. |
 
 ICGT-006 must classify every current harness request, operation, and event semantic as exact, lossy,
-explicitly unsupported, or deferred. The matrix covers ordered conversation roles/content; ordered
-repository-instruction source/content; text delta/completion; provider-emitted tool-call identity,
+explicitly unsupported, or deferred. The matrix covers ordered conversation roles/content; CAH
+repository guidance mapped into generic ordered instruction-block source/content; text
+delta/completion; provider-emitted tool-call identity,
 name, and arguments; optional, non-authoritative, non-negative usage; normalized failure code,
-bounded control-safe message, and retryability; exactly-one terminal behavior; cancellation;
-no-later-event behavior; repeatable local cleanup; and confirmed versus unconfirmed upstream
-cleanup. The committed harness contract bounds both provider-reported token counts through
-`MAX_MODEL_USAGE_TOKENS`. ICGT-006 maps that existing bound; ICGT-020 later pins its exact harness
-revision and value. Fixed per-code messages are CAH-023 adapter policy, not a promise of the
-provider-neutral port.
+bounded control-safe message, and retryability; lazy operation start; single-consumer event claim;
+exactly-one terminal behavior; cancellation with `cancelled` versus `already_closed` outcomes;
+no-later-event behavior; repeatable local cleanup; idempotent forced local task reaping; and confirmed
+versus unconfirmed upstream cleanup. The committed harness contract bounds both provider-reported
+token counts through `MAX_MODEL_USAGE_TOKENS`. ICGT-006 maps that existing bound; ICGT-020 later pins
+its exact harness revision and value. Fixed per-code messages are CAH-023 adapter policy, not a
+promise of the provider-neutral port.
+
+FastGate's generic completed text is intentionally broader than CAH's terminal-text policy. A future
+CAH adapter rejects an inadmissible response as one fixed safe `invalid_response`; it does not
+sanitize, truncate, emit, or log the text. Likewise, no-text failure usage is preserved on the
+FastGate wire but is currently unrepresentable by CAH. Only failure usage after observed text can be
+deferred to the ICGT-011 stream grammar; ICGT-020 may publish the no-text omission only as explicitly
+lossy, while exactness requires a later CAH contract change.
 
 Required semantic loss blocks the ICGT-006 contract from proceeding unless the FastGate-owned schema
 preserves it, a named versioned extension owns it, or a later ADR supersedes ADR 0003. The current
-harness request has no tool declaration. A future client-declared unsupported capability can be
-rejected before paid work; an unsolicited provider-emitted tool event can only become a bounded
-post-dispatch failure. Neither case may be silently discarded or described as the other.
+harness request has no tool declaration. ICGT-009 owns the rejection decision/envelope and proves the
+fake is not invoked; ICGT-010 repeats the no-dispatch proof at the HTTP boundary. An
+unsolicited provider-emitted tool event can only become a bounded post-dispatch failure. Neither case
+may be silently discarded or described as the other.
 
 Endpoint, authentication, and logical model alias are adapter configuration, not fields silently
 invented in the current harness `ProviderRequest`. The joint ICGT-020 profile pins an immutable
 harness contract snapshot and exact FastGate schema/fixture versions, then separates ownership:
 
-- FastGate publishes supported protocol/authentication schemes, server TLS and redirect behavior,
-  logical aliases, capability admission, normalized wire failures, bounded identifiers, cancellation
-  observation, and upstream-cleanup telemetry.
+- FastGate publishes only implemented, conformance-tested server behavior. The first handoff is
+  loopback-only and unauthenticated; it includes logical aliases, capability admission, normalized
+  wire failures, bounded identifiers, cancellation observation, and any upstream-cleanup metric later
+  defined by ICGT-017 and evidenced by ICGT-018. It advertises no authentication/TLS scheme.
 - Code Assist Harness owns trusted endpoint selection, credential source/scope/rotation/redaction,
   TLS verification and any explicit loopback-only HTTP exception, redirect following, ambient versus
   explicit proxy/environment trust, request/event/failure mapping, retry behavior, and local
@@ -168,12 +181,18 @@ records the bundle manifest and digest, and may not change its semantics. A sema
 to the handoff review under a new contract version. The future CAH-owned adapter pins the published
 manifest/digest before the joint profile is called accepted in both repositories.
 
+ICGT-020 re-audits the then-current CAH provider contract instead of treating the ICGT-006 snapshot
+as permanently adapter-ready. The first handoff is loopback-only, unauthenticated, and no-tool. A
+later non-loopback profile requires implemented FastGate authentication/TLS conformance; full
+coding-agent parity also requires a separately reviewed FastGate tool extension and compatible
+harness contract.
+
 Local cleanup is not proof that a remote provider stopped work. “Confirmed” requires an explicit
 provider terminal cancellation/termination acknowledgement correlated to the active attempt;
 context return, local connection/body closure, or absence of later harness events remains
-unconfirmed. In v1, FastGate records that certainty as bounded operational telemetry, not as a
-harness transcript field or client terminal guarantee. A later client-visible cleanup result
-requires a versioned contract extension.
+unconfirmed. No current v1 runtime records that certainty. ICGT-017 must define any bounded
+operational metric, ICGT-018 owns the first live-provider evidence, and ICGT-020 freezes the handoff.
+A later client-visible cleanup result requires a versioned contract extension.
 
 ## The real integration tension: API semantics
 

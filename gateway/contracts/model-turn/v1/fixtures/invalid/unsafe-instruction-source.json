@@ -1,0 +1,19 @@
+{
+  "version": "v1",
+  "kind": "model_turn.request",
+  "request_id": "req-unsafe-source",
+  "model_alias": "learning-text",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Reject unsafe labels."
+    }
+  ],
+  "instructions": [
+    {
+      "source": "AGENTS.md\n",
+      "content": "Keep labels control-safe."
+    }
+  ],
+  "required_capabilities": []
+}

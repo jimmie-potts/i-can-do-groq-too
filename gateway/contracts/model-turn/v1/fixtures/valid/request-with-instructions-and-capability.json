@@ -1,0 +1,33 @@
+{
+  "version": "v1",
+  "kind": "model_turn.request",
+  "request_id": "req.learning:2",
+  "model_alias": "learning-text",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Explain the repository boundary."
+    },
+    {
+      "role": "assistant",
+      "content": "The gateway owns provider transport."
+    },
+    {
+      "role": "user",
+      "content": "Now summarize it."
+    }
+  ],
+  "instructions": [
+    {
+      "source": "AGENTS.md",
+      "content": "Keep workflow orchestration outside FastGate."
+    },
+    {
+      "source": "gateway/AGENTS.md",
+      "content": "Fail closed when a capability is absent."
+    }
+  ],
+  "required_capabilities": [
+    "tool_calls"
+  ]
+}

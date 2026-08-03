@@ -7,7 +7,7 @@
 - **Implementation status:** Match the linked story
 - **Story:** Link the delivery contract
 - **Review priority:** High or Normal
-- **Visual companion:** Link the verified PPTX when required, otherwise state Not required or Planned
+- **Visual companion:** Default to Not required; link one only when explicitly requested or separately justified
 - **Related architecture:** Link the relevant ADR and conceptual document
 
 > State whether this lesson describes accepted design, planned behavior, or observed implementation.

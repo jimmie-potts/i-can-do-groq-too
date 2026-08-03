@@ -9,22 +9,22 @@ into one small, observable inference platform.
 
 ## Current status
 
-The repository foundation, Go toolchain decision, and
-[ICGT-005 FastGate lifecycle](user-stories/icgt-005-bootstrap-fastgate-service.md) are implemented.
-The root Go module now contains one standard-library-only executable that validates bounded server
-configuration, serves an operational health response, and shuts down cleanly on cancellation. The
-offline gate enforces the exact module layout and runs formatting, vet, ordinary tests, and race
-tests.
+The repository foundation, Go toolchain decision,
+[ICGT-005 FastGate lifecycle](user-stories/icgt-005-bootstrap-fastgate-service.md), and
+[ICGT-006 model-turn v1 contract](user-stories/icgt-006-select-fastgate-api.md) are implemented. The
+root Go module contains one standard-library-only executable that serves operational health and
+shuts down cleanly. FastGate now also owns strict language-neutral request, result, and failure
+schemas; a harness mapping; 26 fixtures; and a dependency-free offline contract validator.
 
-[ICGT-006](user-stories/icgt-006-select-fastgate-api.md) is next in dependency order. No inference
-request endpoint, provider contract or adapter, database, Kubernetes controller, or simulator has
-been implemented yet.
+[ICGT-007](user-stories/icgt-007-define-provider-contracts.md) is next in dependency order. No
+inference request endpoint, provider contract or adapter, database, Kubernetes controller, or
+simulator has been implemented yet.
 
 ## What we are building
 
 | Order | Component | Responsibility | Status |
 | ---: | --- | --- | --- |
-| 1 | [FastGate](gateway/README.md) | Provider transport, streaming, routing, limits, and operational telemetry | Lifecycle foundation implemented |
+| 1 | [FastGate](gateway/README.md) | Provider transport, streaming, routing, limits, and operational telemetry | Lifecycle and v1 contract tooling implemented |
 | 2 | [LatencyLab](latency-lab/README.md) | Inference-aware load, latency, and failure experiments | Planned |
 | 3 | [ModelEndpoint Operator](model-operator/README.md) | Kubernetes reconciliation for inference-facing services | Planned |
 | 4 | [TenantPlane](control-plane/README.md) | Identity, authorization, quota, budget, usage, and audit control plane | Planned |
@@ -87,7 +87,8 @@ For each unit:
 3. Predict the important types, state, failure behavior, and tests.
 4. Implement one bounded behavior.
 5. Review the diff personally, with special attention to the story's review checkpoint.
-6. Run a separate correctness review and the complete repository gate.
+6. Apply the [PR review regression checklist](docs/pr-review-checklist.md), run a separate
+   correctness review, and run the complete repository gate.
 7. Replace planned lesson material with exact repository-backed code samples and a teach-back.
 
 The [user-story index](user-stories/README.md) contains the dependency order. The
@@ -98,7 +99,7 @@ verified.
 
 ```text
 .
-├── gateway/              FastGate lifecycle source, tests, scope, and guidance
+├── gateway/              FastGate lifecycle plus versioned client-contract artifacts
 ├── latency-lab/          LatencyLab scope
 ├── model-operator/       ModelEndpoint Operator scope
 ├── control-plane/        TenantPlane scope
@@ -123,17 +124,17 @@ Go 1.26.5 or later, cgo, and a working C compiler for race tests:
 ./scripts/check
 ```
 
-The gate is offline. It checks repository hygiene, local Markdown links, story/lesson parity, exact
-Go module and CI policy, formatting, vet, ordinary tests, race prerequisites, and race tests.
-Toolchain installation and CI job preparation occur before the gate; the gate itself does not
-download tools or modules.
+The gate is offline. It checks repository hygiene, local Markdown links, story/lesson parity, the
+strict model-turn schema and complete fixture corpus, exact Go module and CI policy, formatting,
+vet, ordinary tests, race prerequisites, and race tests. Toolchain installation and CI job
+preparation occur before the gate; the gate itself does not download tools or modules.
 
 ## Provider and framework direction
 
 - [ADR 0003](docs/adr/0003-fastgate-api-surface.md) selects a small FastGate-owned model-turn
-  protocol as the first public contract. ICGT-006 still owns its exact non-streaming schema, bounds,
-  mapping, fixtures, and offline validator. Chat Completions and Responses compatibility facades are
-  not part of v1.
+  protocol as the first public contract. ICGT-006 materializes its exact non-streaming schema,
+  bounds, mapping, fixtures, parse profile, version rule, and offline validator. Chat Completions and
+  Responses compatibility facades are not part of v1.
 - A deterministic fake will precede either live provider, while OpenAI will be the first live
   FastGate provider and Groq will follow after measurable baseline behavior exists.
 - Provider differences are explicit capabilities. Unsupported behavior is rejected, emulated, or

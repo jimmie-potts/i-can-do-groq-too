@@ -1,8 +1,9 @@
 # Unit lessons
 
-Every implementation-ready story has one written learning companion. A story defines what must be
-delivered; its lesson explains the concepts, important code, failure paths, trade-offs, and personal
-review questions.
+Every implementation-ready story has exactly one source-backed Markdown learning companion. A story
+defines what must be delivered; its lesson explains the concepts, important code, failure paths,
+trade-offs, and personal review questions. Visual companions are optional and never determine
+whether a story or lesson is complete.
 
 ## Evidence states
 
@@ -25,9 +26,9 @@ evidence.
 | ICGT-003 | [Repository checks](icgt-003-repository-checks.md) | Verified against implementation | Not required - small tooling unit |
 | ICGT-004 | [Go toolchain and modules](icgt-004-go-toolchain-and-modules.md) | Verified against implementation | Not required - decision unit |
 | ICGT-005 | [Go service lifecycle](icgt-005-go-service-lifecycle.md) | Verified against implementation | [FastGate service lifecycle](assets/icgt-005-go-service-lifecycle.pptx) |
-| ICGT-006 | [Defining FastGate model-turn v1](icgt-006-selecting-client-protocol.md) | Planned | Required when verified - contract tooling |
-| ICGT-007 | [Provider contracts](icgt-007-provider-contracts.md) | Planned | Required when verified |
-| ICGT-008 | [Basic deterministic fake upstream](icgt-008-basic-deterministic-fake.md) | Planned | Required when verified |
+| ICGT-006 | [Defining FastGate model-turn v1](icgt-006-selecting-client-protocol.md) | Verified against implementation | Not required - Markdown contract lesson |
+| ICGT-007 | [Provider contracts](icgt-007-provider-contracts.md) | Planned | Optional - not required for completion |
+| ICGT-008 | [Basic deterministic fake upstream](icgt-008-basic-deterministic-fake.md) | Planned | Optional - not required for completion |
 
 Use [the lesson template](lesson-template.md) for new implementation-ready units and read
 [the scoped guidance](AGENTS.md) before editing lesson evidence.
@@ -47,8 +48,9 @@ substitute for reading the important source.
 
 ## Visual companions
 
-High-review-priority code-bearing units add a PPTX under `assets/` after written/code evidence is
-stable. Documentation-only foundation units do not require one unless a visual materially improves
-the decision review. Render every slide, inspect each image, and run the available overflow test
-before listing a deck as verified evidence. Visuals should make ownership, sequence, state, or
-failure behavior easier to remember; decoration is not evidence.
+Visual companions are created only when the user explicitly requests one or a separately reviewed
+justification explains how it materially improves understanding. They never replace the required
+Markdown lesson and are not completion evidence for the story itself. When selected, add the visual
+under `assets/` only after written and code evidence is stable, render and inspect every slide, and
+run the available overflow test before listing it as verified. The existing ICGT-005 deck remains
+verified historical evidence for that unit.

@@ -6,7 +6,7 @@
 - **Implementation status:** Planned; no fake upstream exists
 - **Story:** [ICGT-008](../../user-stories/icgt-008-build-basic-fake-upstream.md)
 - **Review priority:** High
-- **Visual companion:** Planned after implementation
+- **Visual companion:** Not required; optional only when explicitly requested or separately justified
 - **Related architecture:** [ADR 0002](../adr/0002-fake-first-openai-first-live.md) and
   [FastGate agent guidelines](../../gateway/AGENTS.md)
 
@@ -15,13 +15,14 @@
 ## Quick summary
 
 This unit will implement a non-streaming programmable upstream that is stricter than a canned mock.
-It verifies exact inputs, models one result or enumerated failure, and proves no expected interaction
-was skipped.
+It verifies exact inputs, models one result or enumerated failure with optional bounded usage, and
+proves no expected interaction was skipped.
 
 ## Learning objectives
 
 You should be able to distinguish fake, mock, and live adapter roles; explain safe exact matching;
-and use exhaustion verification to catch incomplete interactions.
+preserve failure usage absence versus observed zero; and use exhaustion verification to catch
+incomplete interactions.
 
 ## Why this unit matters
 
@@ -57,14 +58,16 @@ the later event-grammar and concurrency-fake units.
 
 ## Practical walkthrough
 
-The implementation should begin with one exact successful exchange, then add enumerated failure,
-mismatch, and exhaustion errors. Each state is covered before the fake is used by an HTTP endpoint.
+The implementation should begin with one exact successful exchange, then add enumerated failures
+with absent and present usage, mismatch, and exhaustion errors. Each state is covered before the fake
+is used by an HTTP endpoint.
 
 ## Personal code review map
 
 | Review path | Why it matters | Question to answer |
 | --- | --- | --- |
 | Planned exchange validation | Prevents ambiguous success/failure scenarios | Is every exchange exactly terminal? |
+| Planned failed-outcome tests | Preserve bounded evidence through the fake | Are absent usage, zero usage, and nonzero usage distinguishable? |
 | Planned exhaustion tests | Prevent false-positive tests | Does success prove the whole interaction occurred? |
 
 ## Implementation code samples
@@ -76,6 +79,7 @@ None. Add exact fake and test excerpts after implementation.
 - Actual request differs in a secret-bearing field: report only a bounded field path.
 - Test forgets to call the expected request: exhaustion fails at teardown.
 - Test omits an expected exchange: the remaining script makes verification fail.
+- A scripted failed outcome with observed zero usage is collapsed into absent usage.
 
 ## What changed during implementation
 
@@ -91,6 +95,7 @@ cost or complexity.
 ## Practical exercises
 
 - Write exact exchanges for one result, one failure, and one mismatch.
+- Write separate failed exchanges for absent usage and observed zero usage.
 - Explain how a fake can verify a request without printing mismatched content.
 - Explain why streaming gates should wait for the stream-event contract.
 
@@ -98,6 +103,7 @@ cost or complexity.
 
 - The fake is a strict implementation of the production port, not a hard-coded answer.
 - Exact matching and fixed failures make interaction repeatable.
+- Scripted failure evidence preserves absence separately from an observed zero.
 - Exhaustion verification proves expected interaction as well as expected output.
 
 ## Glossary
@@ -109,7 +115,7 @@ cost or complexity.
 
 1. What does a strict fake prove that a canned return value cannot?
 2. Why must mismatch diagnostics omit request content?
-3. When should a later logical-gate fake be added instead of expanding this unit?
+3. Why must the fake distinguish absent failure usage from observed zero usage?
 
 ## Further reading
 

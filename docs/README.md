@@ -12,6 +12,7 @@ learning evidence.
 | [Roadmap](roadmap.md) | Dependency order and milestone outcomes |
 | [ADR index](adr/README.md) | Accepted, proposed, and superseded decisions |
 | [Lesson index](lessons/README.md) | One-to-one story learning companions and evidence rules |
+| [PR review checklist](pr-review-checklist.md) | Reusable missed-case questions and regression evidence for future reviews |
 | [Glossary](glossary.md) | Shared domain language |
 | [Local setup](setup.md) | Environment preparation, Go file concepts, and offline validation preflight |
 | [Troubleshooting](troubleshooting.md) | Environment-specific setup failures and workarounds |

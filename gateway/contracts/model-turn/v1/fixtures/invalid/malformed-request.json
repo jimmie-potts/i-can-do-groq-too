@@ -1,0 +1,4 @@
+{
+  "version": "v1",
+  "kind": "model_turn.request",
+  "request_id": "req-malformed",

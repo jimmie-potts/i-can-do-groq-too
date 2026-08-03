@@ -101,6 +101,8 @@ The source conversation did not settle:
 - the Go module/workspace strategy;
 - license and release model;
 - migration, dashboard, and deployment tooling; or
-- which stories require visual lesson decks beyond written lessons.
+- whether visual lesson decks should be required beyond written lessons.
 
-This repository resolves only the decisions required by each small implementation unit.
+This repository resolves only the decisions required by each small implementation unit. The later
+learning-policy review kept one source-backed Markdown lesson mandatory and made visual companions
+optional rather than a completion requirement.

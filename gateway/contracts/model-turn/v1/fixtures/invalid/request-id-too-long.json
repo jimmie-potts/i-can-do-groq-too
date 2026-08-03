@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "kind": "model_turn.request",
+  "request_id": "A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A1234567A",
+  "model_alias": "learning-text",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Reject identifiers above the public bound."
+    }
+  ],
+  "instructions": [],
+  "required_capabilities": []
+}
