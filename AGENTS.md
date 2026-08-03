@@ -5,7 +5,8 @@
 I Can Do Groq Too is a learning-first inference infrastructure monorepo. The intended components are
 FastGate, LatencyLab, ModelEndpoint Operator, TenantPlane, and FleetSim. The repository currently
 implements the root Go module, FastGate lifecycle, and model-turn v1 contract tooling. Provider
-inference behavior and the other services remain planned; do not describe them as implemented.
+domain contracts are also implemented, but provider inference behavior and the other services
+remain planned; do not describe them as implemented.
 
 `code-assist-harness` is a separate repository and client. It owns coding workflow state, tools,
 approvals, audit records, transcripts, and correctness evaluation. This repository owns
@@ -144,15 +145,20 @@ A code-bearing story is Done only when:
 6. The linked lesson describes observed implementation rather than planned behavior.
 7. The repository status, roadmap, and ADRs remain accurate.
 8. The complete offline gate passes.
+9. The scoped story commit is pushed and its pull request is open and ready for review, unless the
+   user explicitly requests a local-only checkpoint or publication is externally blocked.
 
 ## Git and pull requests
 
 Use `main` as the default branch. Use short imperative commit subjects and one logical story per
 commit when practical. Prefer branch names such as `codex/icgt-005-bootstrap-fastgate`.
 
-Do not commit unrelated user changes. Do not create a remote repository, push, open a pull request,
-or mark one ready unless the user asks for publication. When publication is requested, report the
-story, important review paths, validation commands, and remaining risks in the pull request.
+Do not commit unrelated user changes or create a new remote repository without an explicit request.
+For approved story implementation, publication is part of completion: commit the scoped changes,
+push the branch, open a pull request, and mark it ready only after review and the complete gate pass.
+The pull request reports the story, important review paths, validation commands, and remaining
+risks. Stop before publication only when the user explicitly requests a local-only checkpoint or an
+external authentication, authorization, or service failure blocks the workflow.
 
 ## Security and configuration
 

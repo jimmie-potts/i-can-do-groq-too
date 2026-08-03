@@ -1,7 +1,7 @@
 # Roadmap
 
-**Status:** Planned outcomes. M0 and ICGT-004 through ICGT-006 are implemented; the provider
-contract, fake upstream, and transport portions of the M1 walking skeleton remain planned.
+**Status:** Planned outcomes. M0 and ICGT-004 through ICGT-007 are implemented; the fake upstream
+and transport portions of the M1 walking skeleton remain planned.
 
 ## Delivery principles
 
@@ -32,8 +32,8 @@ Reviewed M1 unit sequence:
   lifecycle;
 - ICGT-006 (Done) defines the non-streaming v1 schema, mapping, fixtures, parse profile, extension
   versioning rule, and offline validator for the FastGate-owned protocol selected in ADR 0003;
-- ICGT-007 define only the provider-neutral non-streaming gateway contract required by the next
-  fake; and
+- ICGT-007 (Done) defines only the provider-neutral non-streaming gateway contract required by the
+  next fake; and
 - ICGT-008 build the basic non-streaming deterministic fake upstream.
 
 Later units split admission/provider-neutral execution, endpoint/outcome mapping, FastGate-owned stream

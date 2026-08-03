@@ -172,9 +172,11 @@ The error codes have these v1 meanings:
 | `internal_error` | FastGate failed unexpectedly and exposes no internal or provider details. |
 
 ICGT-009 owns the fixed `unsupported_capability` message and `retryable: false` admission outcome.
-ICGT-010 owns HTTP status mapping for every admission and provider outcome, plus retryability mapping
-for the remaining codes. The schema validates the normalized envelope but does not prove that a
-future runtime chose the truthful code or flag.
+ICGT-010 owns HTTP status mapping for every admission and provider outcome. For a provider-origin
+failure, it copies the provider-owned `code`, `retryable`, and optional usage observation unchanged;
+it does not reinterpret retryability. Admission owners author their fixed code, safe message,
+retryability, and usage absence. The schema validates the normalized envelope but does not prove
+that a future runtime chose the truthful code or flag.
 
 Provider exceptions, response bodies, headers, credentials, raw tool arguments, and unbounded text
 do not belong in this shape. Usage remains observation rather than billing proof or retry authority,

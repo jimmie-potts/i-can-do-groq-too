@@ -10,9 +10,10 @@ orchestration, tools, approvals, tenant authority, and deployment reconciliation
 component.
 
 ADR 0003 selects a small FastGate-owned model-turn protocol. ICGT-006 publishes its reviewed
-non-streaming v1 schema, mapping, fixtures, and offline validation; ICGT-007 is the first story that
-may define the downstream provider-domain contract. No public inference endpoint exists. ADR 0004
-selects Go 1.26.5 and one root module, which ICGT-005 materializes with lifecycle behavior.
+non-streaming v1 schema, mapping, fixtures, and offline validation; ICGT-007 defines the downstream
+provider-domain values and synchronous port. ICGT-008 is the first story that may implement that
+port. No public inference endpoint exists. ADR 0004 selects Go 1.26.5 and one root module, which
+ICGT-005 materializes with lifecycle behavior.
 
 ## Reviewable package boundaries
 
