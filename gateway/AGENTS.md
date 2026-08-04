@@ -12,8 +12,9 @@ component.
 ADR 0003 selects a small FastGate-owned model-turn protocol. ICGT-006 publishes its reviewed
 non-streaming v1 schema, mapping, fixtures, and offline validation; ICGT-007 defines the downstream
 provider-domain values and synchronous port; ICGT-008 implements its strict basic deterministic
-fake. No public inference endpoint exists. ADR 0004 selects Go 1.26.5 and one root module, which
-ICGT-005 materializes with lifecycle behavior.
+fake; and ICGT-009 implements bounded strict admission plus one validated injected invocation. No
+public inference endpoint exists. ADR 0004 selects Go 1.26.5 and one root module, which ICGT-005
+materializes with lifecycle behavior.
 
 ## Reviewable package boundaries
 

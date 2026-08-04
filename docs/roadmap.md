@@ -1,7 +1,7 @@
 # Roadmap
 
-**Status:** Planned outcomes. M0 and ICGT-004 through ICGT-008 are implemented; admission and
-transport portions of the M1 walking skeleton remain planned.
+**Status:** Planned outcomes. M0 and ICGT-004 through ICGT-009 are implemented; HTTP transport and
+provider-outcome presentation portions of the M1 walking skeleton remain planned.
 
 ## Delivery principles
 
@@ -35,8 +35,8 @@ Reviewed M1 unit sequence:
 - ICGT-007 (Done) defines only the provider-neutral non-streaming gateway contract required by the
   next fake;
 - ICGT-008 (Done) implements the basic non-streaming deterministic fake upstream; and
-- ICGT-009 (Planned) has a reviewed contract for bounded strict admission and exactly one injected
-  provider-neutral invocation, with deterministic-fake evidence and no HTTP binding.
+- ICGT-009 (Done) implements bounded strict admission and exactly one injected provider-neutral
+  invocation, with deterministic-fake evidence and no HTTP binding.
 
 Later units split endpoint/outcome mapping, FastGate-owned stream grammar, and deterministic
 concurrency/cancellation behavior so each review has one primary concept. ICGT-010 binds the first
@@ -134,8 +134,9 @@ statements are complementary, not competing sequences.
 
 ## Detailed-planning boundary
 
-The detailed, linked story list ends at the reviewed Planned ICGT-009 on purpose. ICGT-010 remains an
-outcome slice until ICGT-009 has implementation evidence and its own start decisions are reviewed.
+The detailed, linked story list ends at the delivered ICGT-009 on purpose. ICGT-010 remains an
+outcome slice until its HTTP, loopback binding, fake concurrency, outcome mapping, and review
+decisions are promoted into a reviewed story and lesson.
 Later rows in [the backlog](../user-stories/backlog.md) are outcome slices, not promises that their
 contracts are ready. Before promoting one, create its story and lesson, lock dependencies and
 exclusions, and name the exact human review checkpoint.

@@ -1,8 +1,8 @@
 # FastGate
 
-**Status:** Lifecycle, model-turn v1 contract tooling, the internal provider contract, and its basic
-deterministic fake are implemented. FastGate currently serves only operational health; no inference
-endpoint or live provider adapter exists yet.
+**Status:** Lifecycle, model-turn v1 contract tooling, the internal provider contract, its basic
+deterministic fake, and bounded model-turn admission/execution are implemented. FastGate currently
+serves only operational health; no inference endpoint or live provider adapter exists yet.
 
 FastGate is the first implementation target: a small inference gateway that gives clients one
 reviewed model-turn contract while keeping provider transport, streaming, routing, rate limits, and
@@ -23,7 +23,7 @@ The initial implementation sequence is intentionally smaller than “build a gat
    invocation—completed by ICGT-007;
 5. implement a basic non-streaming deterministic fake upstream—completed by ICGT-008;
 6. implement bounded body/semantic admission and one injected provider-neutral execution, tested
-   with the deterministic fake and without HTTP binding;
+   with the deterministic fake and without HTTP binding—completed by ICGT-009;
 7. bind a loopback-only endpoint, reject wrong method/media type before dispatch, and map every
    completed or failed provider outcome;
 8. define the FastGate-owned model-turn SSE grammar, then extend the fake with deterministic stream
@@ -33,10 +33,12 @@ The initial implementation sequence is intentionally smaller than “build a gat
 11. add OpenAI as the first opt-in live upstream; and
 12. add Groq only after direct and gateway baselines can be compared.
 
-Steps 1 through 5 are complete. Step 6 now has a reviewed
-[ICGT-009 delivery contract](../user-stories/icgt-009-admit-and-execute-model-turn.md) and planned
-lesson, so it is implementation-ready but has not started. The detailed sequence stops there until
-its admission and provider-neutral execution evidence exists.
+Steps 1 through 6 are complete. The
+[ICGT-009 delivery contract](../user-stories/icgt-009-admit-and-execute-model-turn.md),
+[implementation](internal/modelturn), and
+[verified lesson](../docs/lessons/icgt-009-bounded-model-turn-admission.md) provide bounded admission,
+zero/one-dispatch, and provider-return evidence. Step 7 remains an outcome slice until its HTTP and
+fake-concurrency decisions are promoted into a reviewed story and lesson.
 
 The provider-neutral seam lives in [`internal/provider`](internal/provider). It carries only ordered
 conversation, generic instructions, required capabilities, completed text, optional usage, and
@@ -47,6 +49,12 @@ The strict test implementation lives in [`internal/provider/fake`](internal/prov
 one bounded ordered script, matches every provider request field exactly, and returns a scripted
 result or direct normalized failure. It performs no transport work and deliberately defers
 streaming, cancellation behavior, logical gates, and concurrency to their later stories.
+
+The admission boundary lives in [`internal/modelturn`](internal/modelturn). It consumes but does not
+close a bounded `io.Reader`, enforces the strict v1 JSON and request profile, trusts correlation only
+after the whole document is safe, rejects `tool_calls` before the fixed `learning-text` alias check,
+and invokes the injected provider port at most once. It has no HTTP, live-adapter, retry, logging,
+timer, goroutine, queue, or network behavior.
 
 ## Run the lifecycle foundation
 

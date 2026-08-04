@@ -37,7 +37,7 @@ would become coupled to that vendor.
 The two FastGate boundaries also have different jobs:
 
 ```text
-northbound client JSON -> future admission/mapping -> provider.Request -> future adapter
+northbound client JSON -> bounded admission/mapping -> provider.Request -> future adapter
 ```
 
 The public model-turn document needs `version`, `kind`, `request_id`, and `model_alias` for wire

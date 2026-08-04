@@ -35,11 +35,11 @@ an individual story is the reviewed contract for one small implementation unit.
 | 6 | [ICGT-006: Specify and version FastGate's model-turn v1 contract](icgt-006-select-fastgate-api.md) | [Defining FastGate model-turn v1](../docs/lessons/icgt-006-selecting-client-protocol.md) | M1 | Done | ICGT-005 | High |
 | 7 | [ICGT-007: Define provider contracts](icgt-007-define-provider-contracts.md) | [Provider contracts](../docs/lessons/icgt-007-provider-contracts.md) | M1 | Done | ICGT-006 | High |
 | 8 | [ICGT-008: Build the basic deterministic fake upstream](icgt-008-build-basic-fake-upstream.md) | [Basic deterministic fake](../docs/lessons/icgt-008-basic-deterministic-fake.md) | M1 | Done | ICGT-007 | High |
-| 9 | [ICGT-009: Admit and execute one fake-backed model turn](icgt-009-admit-and-execute-model-turn.md) | [Bounded model-turn admission](../docs/lessons/icgt-009-bounded-model-turn-admission.md) | M1 | Planned | ICGT-008 | High |
+| 9 | [ICGT-009: Admit and execute one fake-backed model turn](icgt-009-admit-and-execute-model-turn.md) | [Bounded model-turn admission](../docs/lessons/icgt-009-bounded-model-turn-admission.md) | M1 | Done | ICGT-008 | High |
 
-ICGT-001 through ICGT-008 are delivered and validated. ICGT-009 has a reviewed implementation-ready
-contract but has not started. Promote each later row only after its named dependency and start
-conditions are satisfied; no live provider or public inference endpoint is implementation-ready.
+ICGT-001 through ICGT-009 are delivered and validated. Promote each later row only after its named
+dependency and start conditions are satisfied; no live provider or public inference endpoint is
+implementation-ready.
 
 ## Later outcome slices
 
@@ -69,8 +69,8 @@ failures, exactly one admitted invocation, and validation of that provider retur
 fake supplies the primary zero/one-call evidence. ICGT-009 does not bind the public inference route or
 map a valid provider outcome to wire transport.
 
-After ICGT-009 is implemented, ICGT-010 binds the first loopback-only, fake-backed route, defines
-method/media-type behavior, and
+ICGT-010 is the next outcome slice. Once promoted and approved, it binds the first loopback-only,
+fake-backed route, defines method/media-type behavior, and
 exhaustively maps both completed and normalized failed provider outcomes, including optional failure
 usage. It owns HTTP status mapping for admission and provider outcomes, repeats the `tool_calls`
 ordering test against the fake, and must observe zero calls. It may
@@ -124,3 +124,6 @@ separately justified; they are never a requirement for Done.
   ICGT-008 handoff.
 - [ICGT-008 deterministic fake](notes/2026-08-03-icgt-008-basic-deterministic-fake.md) records the
   strict script design, sticky safe diagnostics, validation evidence, and ICGT-009 handoff.
+- [ICGT-009 bounded model-turn admission](notes/2026-08-03-icgt-009-bounded-model-turn-admission.md)
+  records the strict admission design, implementation checkpoints, review findings, validation, and
+  ICGT-010 handoff.

@@ -1,6 +1,6 @@
 # ICGT-009 - Admit and execute one fake-backed model turn
 
-- **Status:** Planned
+- **Status:** Done
 - **Milestone:** M1 - FastGate non-streaming walking skeleton
 - **Dependencies:** ICGT-008
 - **Lesson:** [Bounded model-turn admission](../docs/lessons/icgt-009-bounded-model-turn-admission.md)
@@ -53,7 +53,7 @@ changed lines or require more than the two main exported abstractions locked bel
 
 ### Small Go boundary
 
-- The planned package is `gateway/internal/modelturn` and remains standard-library-only.
+- The package is `gateway/internal/modelturn` and remains standard-library-only.
 - Its exact entry points are `NewExecutor(provider.Invoker) (*Executor, error)` and
   `(*Executor).Execute(context.Context, io.Reader) (Outcome, error)`. `Executor` and `Outcome` are the
   only two main exported abstractions. Private strict-parse, wire-shape, and mapping helpers do not
@@ -232,14 +232,14 @@ scoped story commit and one ready-for-review pull request unless review makes a 
    exact caller context reaches the one call. Valid result, direct normalized failure, usage absent
    versus observed zero, and matching context sentinels retain exact identity after
    `provider.ValidateInvocation`.
-9. Deliberately invalid recording invokers cover a raw/wrapped error without traversal, direct typed-nil
-   `*provider.Failure`, fabricated cancellation, invalid result, and simultaneous result/error. Each is
-   called once and becomes only the fixed correlated `internal_error` outcome with no unsafe content
-   or usage.
+9. Deliberately invalid recording invokers cover raw, wrapped, and non-comparable errors without
+   formatting or unwrapping, direct typed-nil `*provider.Failure`, fabricated cancellation, invalid
+   result, and simultaneous result/error. Each is called once and becomes only the fixed correlated
+   `internal_error` outcome with no unsafe content or usage.
 10. The implementation contains no HTTP request/response/status/media-type/listener type, route,
    provider SDK, credential, filesystem/runtime-schema dependency, network I/O, logging of body
    content, retry, timer, goroutine, queue, or dynamic routing registry.
-11. The planned lesson is replaced with exact production and test links, focused happy/failure
+11. The lesson contains exact production and test links, focused happy/failure
    excerpts, observed trade-offs and review changes, exercises, glossary, and exactly three
    teach-back questions.
 12. Focused tests, repeated deterministic tests, applicable `go vet` and race checks, the PR review
@@ -247,7 +247,7 @@ scoped story commit and one ready-for-review pull request unless review makes a 
 
 ## Human review checkpoint
 
-- **Production path:** Trace the future bounded `io.Reader` entry point through strict parse, safe-ID
+- **Production path:** Trace the bounded `io.Reader` entry point through strict parse, safe-ID
   recovery, exact v1 admission, capability and alias gates, `provider.NewRequest`, and exactly one
   `provider.Invoker.Invoke` call followed immediately by `provider.ValidateInvocation`.
 - **Failure/test path:** Trace exact-limit versus one-over reading and the schema-valid `tool_calls`
@@ -256,7 +256,7 @@ scoped story commit and one ready-for-review pull request unless review makes a 
   invalid recording-invoker return becomes the fixed internal failure after one call.
 - **Invariant:** No rejected body can start provider work, and every admitted body starts exactly one
   provider-neutral invocation; every valid provider alternative is preserved and every invalid one is
-  replaced without unsafe traversal or disclosure.
+  replaced without unsafe formatting, unwrapping, retention, or disclosure.
 - **Deferred:** HTTP path/method/media type/status, request-body closure and listener binding,
   provider-result/failure wire mapping, fake concurrency policy, authentication, dynamic routing,
   retries, streaming, cancellation behavior, deadlines, cleanup, backpressure, telemetry, and live
@@ -264,7 +264,7 @@ scoped story commit and one ready-for-review pull request unless review makes a 
 
 ## Validation
 
-Implementation must add and run:
+Implementation added and ran:
 
 - focused Go tests for the new admission/execution package;
 - fixture-parity, privacy-sentinel, exact-bound, zero-dispatch, and exactly-once tests;
@@ -272,17 +272,13 @@ Implementation must add and run:
 - `go vet` and the race detector for the affected packages; and
 - `./scripts/check`.
 
-The readiness-only documentation change is validated by `./scripts/check`; it is not runtime
-evidence for these future commands.
-
 ## Documentation impact
 
-- Promote this linked story and its planned Markdown lesson in the story, lesson, roadmap, root, and
-  FastGate status documents without claiming implementation.
-- Publish the accepted planned body cap, alias, capability ordering, correlation rule, and no-ID
-  response in the model-turn v1 contract README.
-- After implementation, add one evidence-backed story note, update the lesson and status documents,
-  and add a PR-review checklist entry only if review exposes a reusable missed-case class.
+- The story, lesson, roadmap, root, FastGate, contract, and index status documents describe the
+  implemented boundary without claiming an HTTP endpoint.
+- The evidence-backed implementation note records review discoveries and the ICGT-010 handoff.
+- The PR-review checklist records reusable allocation-capacity, observable ordering/reset, and
+  actual-operands interface-equality review classes exposed by implementation review.
 
 ## Out of scope
 

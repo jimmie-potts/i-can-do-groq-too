@@ -5,8 +5,9 @@
 I Can Do Groq Too is a learning-first inference infrastructure monorepo. The intended components are
 FastGate, LatencyLab, ModelEndpoint Operator, TenantPlane, and FleetSim. The repository currently
 implements the root Go module, FastGate lifecycle, model-turn v1 contract tooling, provider-domain
-contracts, and the basic deterministic fake. Provider inference behavior and the other services
-remain planned; do not describe them as implemented.
+contracts, the basic deterministic fake, and bounded model-turn admission/execution into an injected
+provider port. The public inference endpoint, live provider adapters, and the other services remain
+planned; do not describe them as implemented.
 
 `code-assist-harness` is a separate repository and client. It owns coding workflow state, tools,
 approvals, audit records, transcripts, and correctness evaluation. This repository owns
