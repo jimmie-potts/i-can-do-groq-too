@@ -22,8 +22,8 @@ The initial implementation sequence is intentionally smaller than “build a gat
 4. define FastGate-owned provider request, result, and failure values for one non-streaming
    invocation—completed by ICGT-007;
 5. implement a basic non-streaming deterministic fake upstream—completed by ICGT-008;
-6. implement bounded body/semantic admission and one provider-neutral fake execution without HTTP
-   binding;
+6. implement bounded body/semantic admission and one injected provider-neutral execution, tested
+   with the deterministic fake and without HTTP binding;
 7. bind a loopback-only endpoint, reject wrong method/media type before dispatch, and map every
    completed or failed provider outcome;
 8. define the FastGate-owned model-turn SSE grammar, then extend the fake with deterministic stream
@@ -33,9 +33,10 @@ The initial implementation sequence is intentionally smaller than “build a gat
 11. add OpenAI as the first opt-in live upstream; and
 12. add Groq only after direct and gateway baselines can be compared.
 
-The reviewed planned sequence currently stops at steps 1 through 5, and all five are complete.
-ICGT-009 is the next outcome in dependency order, but it remains a roadmap slice until a reviewed
-story and lesson lock its exact admission and provider-neutral execution boundary.
+Steps 1 through 5 are complete. Step 6 now has a reviewed
+[ICGT-009 delivery contract](../user-stories/icgt-009-admit-and-execute-model-turn.md) and planned
+lesson, so it is implementation-ready but has not started. The detailed sequence stops there until
+its admission and provider-neutral execution evidence exists.
 
 The provider-neutral seam lives in [`internal/provider`](internal/provider). It carries only ordered
 conversation, generic instructions, required capabilities, completed text, optional usage, and

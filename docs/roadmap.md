@@ -33,16 +33,16 @@ Reviewed M1 unit sequence:
 - ICGT-006 (Done) defines the non-streaming v1 schema, mapping, fixtures, parse profile, extension
   versioning rule, and offline validator for the FastGate-owned protocol selected in ADR 0003;
 - ICGT-007 (Done) defines only the provider-neutral non-streaming gateway contract required by the
-  next fake; and
-- ICGT-008 (Done) implements the basic non-streaming deterministic fake upstream.
+  next fake;
+- ICGT-008 (Done) implements the basic non-streaming deterministic fake upstream; and
+- ICGT-009 (Planned) has a reviewed contract for bounded strict admission and exactly one injected
+  provider-neutral invocation, with deterministic-fake evidence and no HTTP binding.
 
-Later units split admission/provider-neutral execution, endpoint/outcome mapping, FastGate-owned stream
-grammar, and deterministic concurrency/cancellation behavior so each review has one primary concept.
-ICGT-009 owns the raw-body cap, strict decode/schema admission, safe no-ID response, fixed fake alias,
-and declared `tool_calls` rejection with zero-dispatch evidence, then returns one admitted fake
-outcome without transport mapping. ICGT-010 binds the first loopback-only endpoint and exhaustively
-maps completed and failed provider outcomes. Its start conditions must reject non-loopback inference
-binding, and wrong method/media-type paths must prove zero fake calls.
+Later units split endpoint/outcome mapping, FastGate-owned stream grammar, and deterministic
+concurrency/cancellation behavior so each review has one primary concept. ICGT-010 binds the first
+loopback-only endpoint and exhaustively maps completed and failed provider outcomes after ICGT-009
+has implementation evidence. Its start conditions must reject non-loopback inference binding, and
+wrong method/media-type paths must prove zero fake calls.
 
 ### M2 - Streaming reliability
 
@@ -134,9 +134,8 @@ statements are complementary, not competing sequences.
 
 ## Detailed-planning boundary
 
-The detailed, linked story list ends at the delivered ICGT-008 on purpose. ICGT-009 is the next
-dependency-ready outcome, but it may start only after its reviewed story and lesson lock the unit.
-Later rows in
-[the backlog](../user-stories/backlog.md) are outcome slices, not promises that their contracts are
-ready. Before promoting one, create its story and lesson, lock dependencies and exclusions, and
-name the exact human review checkpoint.
+The detailed, linked story list ends at the reviewed Planned ICGT-009 on purpose. ICGT-010 remains an
+outcome slice until ICGT-009 has implementation evidence and its own start decisions are reviewed.
+Later rows in [the backlog](../user-stories/backlog.md) are outcome slices, not promises that their
+contracts are ready. Before promoting one, create its story and lesson, lock dependencies and
+exclusions, and name the exact human review checkpoint.

@@ -29,6 +29,7 @@ evidence.
 | ICGT-006 | [Defining FastGate model-turn v1](icgt-006-selecting-client-protocol.md) | Verified against implementation | Not required - Markdown contract lesson |
 | ICGT-007 | [Provider contracts](icgt-007-provider-contracts.md) | Verified against implementation | Not required - Markdown contract lesson |
 | ICGT-008 | [Basic deterministic fake upstream](icgt-008-basic-deterministic-fake.md) | Verified against implementation | Not required - Markdown implementation lesson |
+| ICGT-009 | [Bounded model-turn admission](icgt-009-bounded-model-turn-admission.md) | Planned | Not required - Markdown planned lesson |
 
 Use [the lesson template](lesson-template.md) for new implementation-ready units and read
 [the scoped guidance](AGENTS.md) before editing lesson evidence.

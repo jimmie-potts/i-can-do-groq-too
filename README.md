@@ -22,8 +22,8 @@ port with ordered exact matching, controlled terminal outcomes, and complete-scr
 
 No inference request endpoint or live provider adapter, database, Kubernetes controller, or
 simulator has been implemented yet. The provider contract and fake are internal test seams, not
-working inference behavior. ICGT-009 is the next outcome in dependency order, but it still needs a
-reviewed story and lesson before implementation.
+working inference behavior. [ICGT-009](user-stories/icgt-009-admit-and-execute-model-turn.md) now has
+a reviewed Planned story and Markdown lesson; its implementation has not started.
 
 ## What we are building
 
