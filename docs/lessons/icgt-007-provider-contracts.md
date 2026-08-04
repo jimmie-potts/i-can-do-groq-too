@@ -15,7 +15,7 @@
 ICGT-007 adds the internal language FastGate will use when it asks any upstream provider for one
 non-streaming model turn. The new [`provider` package](../../gateway/internal/provider/provider.go)
 contains bounded request, result, usage, and failure values plus one synchronous `Invoker` interface.
-It performs no inference yet. ICGT-008 will prove the interface with a deterministic fake.
+ICGT-007 itself performs no inference. ICGT-008 now proves the interface with a deterministic fake.
 
 ## Learning objectives
 

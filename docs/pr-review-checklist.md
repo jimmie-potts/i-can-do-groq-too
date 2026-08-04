@@ -214,6 +214,23 @@ Why: a value can be logically bounded yet allocate before validation, and an app
 error channel can still admit fabricated cancellation, ambiguous outcomes, unsafe wrappers, or
 provider-controlled behavior during rejection.
 
+### Strict deterministic test doubles
+
+- Does an unexpected interaction fail outside the production result/failure channel, so broken test
+  setup cannot look like a real provider or domain failure?
+- Is the first mismatch, extra call, or other interaction violation retained so panic recovery or an
+  ignored immediate failure cannot make final verification pass?
+- Do mismatch diagnostics report only bounded ordinals and the first static field path, with
+  sentinel tests proving that expected and actual content remains absent?
+- Do tests prove ordered second-element matching and lock both top-level and nested field inventories,
+  rather than demonstrating only element zero of today's examples?
+- Are zero calls, exact completion, an unconsumed prefix, an extra call, the exact script bound, and
+  one-over rejection independently exercised with otherwise valid inputs?
+
+Why: a strict fake is executable interaction policy. If its assertion failures share the production
+error channel, are not sticky, or are tested only with invalid fixtures and first-element examples,
+the suite can remain green after the fake stops proving the behavior callers rely on.
+
 ## Story ownership and governing policy
 
 ### Earliest enforceable owner
@@ -273,3 +290,22 @@ unordered JSON Schema enums. The fixes and regression evidence live in:
 - [`NewRequest` and `ValidateInvocation`](../gateway/internal/provider/provider.go);
 - [provider boundary and outcome tests](../gateway/internal/provider/provider_test.go); and
 - [the ICGT-007 learning companion](lessons/icgt-007-provider-contracts.md).
+
+## Evidence added during ICGT-008
+
+The ICGT-008 adversarial review found that the first one-over script test used zero-value exchanges,
+so exchange validation could satisfy it even if the script bound disappeared. It also found that the
+first exact-matcher tests covered only element zero, nested request-value field inventories were not
+locked, and sentinel privacy evidence did not cover extra or uninvoked calls. The corrected evidence
+lives in:
+
+- [the deterministic fake](../gateway/internal/provider/fake/fake.go);
+- [ordered, boundary, inventory, and privacy tests](../gateway/internal/provider/fake/fake_test.go);
+- [the ICGT-008 learning companion](lessons/icgt-008-basic-deterministic-fake.md); and
+- [the ICGT-008 implementation note](../user-stories/notes/2026-08-03-icgt-008-basic-deterministic-fake.md).
+
+The final suite fills exact and one-over scripts with valid exchanges, consumes the complete exact
+boundary, pins the reviewed literal bound, swaps and mutates second message and instruction elements,
+locks `Request`, `Message`, and `Instruction` field inventories, asserts one exact first-mismatch
+diagnostic, and checks every string-bearing request field is absent from mismatch, repeated, extra,
+zero-dispatch, nil-context, and unconsumed-script diagnostics.
