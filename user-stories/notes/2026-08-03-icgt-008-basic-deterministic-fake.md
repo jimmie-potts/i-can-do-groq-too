@@ -106,4 +106,8 @@ scripted outcome and proves the complete ordered interaction without exposing re
 ICGT-009 may use an empty script to prove zero dispatch for invalid admission and a one-exchange
 script to prove exactly one admitted provider-neutral turn. It must not expand the fake with HTTP,
 streaming, gates, cancellation checkpoints, live-provider behavior, retries, or routing. Before work
-begins, ICGT-009 still needs a reviewed implementation-ready story and Markdown lesson.
+begins, ICGT-009 needs a reviewed implementation-ready story and Markdown lesson. That handoff was a
+future requirement when this ICGT-008 note was completed; it is now satisfied by the planned
+[ICGT-009 story](../icgt-009-admit-and-execute-model-turn.md) and
+[lesson](../../docs/lessons/icgt-009-bounded-model-turn-admission.md), without changing ICGT-008's
+historical implementation evidence.

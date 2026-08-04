@@ -1,7 +1,7 @@
 # FastGate model-turn contract v1
 
 ICGT-006 owns these language-neutral contract artifacts. They define the JSON shapes FastGate and
-future clients may pin before provider-domain or transport code exists. They do **not** implement an
+future clients may pin independently of provider-domain or transport code. They do **not** implement an
 HTTP endpoint, authenticate a caller, select a provider, perform inference, stream output, cancel
 work, or prove cleanup behavior.
 
@@ -91,16 +91,24 @@ A `model_turn.request` contains:
 
 These are decoded field bounds, not an aggregate request or raw JSON byte bound. A request using
 many maximum-sized values can contain several million code points, and JSON escaping can make its
-wire representation larger still. ICGT-009 must publish the exact raw-body byte cap and test it as
-an additional transport-admission rule. It must state honestly when a shape-conforming v1 document
-can still be rejected by that cap; the validator's fixture-file limit must not become the endpoint
-limit accidentally.
+wire representation larger still. The reviewed ICGT-009 plan sets the additional runtime raw-body
+cap to exactly 8 MiB, or 8,388,608 bytes, and permits at most 16 simultaneously open JSON object or
+array containers. An otherwise valid exact-limit body may proceed; observing one additional byte
+rejects it before parsing or provider dispatch. These accepted rules are not implemented yet.
+
+The raw cap intentionally admits the maximum decoded fields in a straightforward ASCII encoding
+while allowing a heavily escaped or multibyte shape-conforming v1 document to be rejected. It is
+independent of the checker's 1,000,000-byte fixture-artifact guard and 128-level artifact depth guard;
+those repository limits must not become runtime behavior accidentally.
 
 Array order is semantic. `instructions` are generic caller-supplied instruction blocks kept separate
 from conversation; `source` is an opaque provenance label, not necessarily a file or path. FastGate
 does not discover instructions, apply client-specific precedence, or reinterpret their order.
-`model_alias` is not a provider model ID, and a future routing layer may map it only through reviewed
-configuration.
+`model_alias` is not a provider model ID. The reviewed ICGT-009 plan accepts only the fixed logical
+alias `learning-text` after capability admission. Any other schema-valid alias receives a generic
+correlated `invalid_request` with `The request is invalid.`, `retryable: false`, no usage, and zero
+provider dispatch. A future routing layer may expand that vocabulary only through reviewed
+configuration and behavior.
 
 `request_id` is correlation, not an idempotency key. Reusing it does not authorize deduplication,
 safe retry, replay, or reuse of a billable result.
@@ -115,11 +123,13 @@ authenticated operation.
 ### Capability admission
 
 `["tool_calls"]` is deliberately schema-valid so a client can state a requirement rather than hide
-it in prompt text. Model-turn v1 has no tool definitions or tool result shape. The later runtime must
-therefore reject that declared requirement **before provider dispatch** with
-`unsupported_capability`. ICGT-009 owns that pre-dispatch admission rule and proves the fake is not
+it in prompt text. Model-turn v1 has no tool definitions or tool result shape. The planned ICGT-009
+runtime therefore rejects that declared requirement **before alias selection and provider dispatch**
+with `unsupported_capability`, the exact message
+`The required capability is not supported.`, `retryable: false`, and no usage. A request combining
+`tool_calls` with an unknown alias reports the capability failure. ICGT-009 must prove the fake is not
 invoked; ICGT-010 repeats the integration test at the HTTP boundary and must observe zero provider
-calls.
+calls. None of this runtime behavior is implemented yet.
 
 That is different from an upstream provider unexpectedly producing tool output after dispatch. A
 later adapter must fail closed with `unsupported_upstream_output`; it must not label paid,
@@ -171,7 +181,21 @@ The error codes have these v1 meanings:
 | `unsupported_upstream_output` | After dispatch, the upstream produced a valid semantic output that model-turn v1 cannot represent. |
 | `internal_error` | FastGate failed unexpectedly and exposes no internal or provider details. |
 
-ICGT-009 owns the fixed `unsupported_capability` message and `retryable: false` admission outcome.
+ICGT-009 owns the fixed `unsupported_capability` message and the generic correlated
+`invalid_request` message `The request is invalid.`; both use `retryable: false`, omit usage, and
+precede provider dispatch. An unexpected schema-to-provider inconsistency instead uses
+`internal_error`, the fixed message `The request could not be processed.`, `retryable: false`, and no
+usage rather than blaming the client or exposing the validation detail. These are accepted planned
+outcomes until ICGT-009 supplies runtime evidence.
+
+After its one planned invocation, ICGT-009 also validates the returned provider alternative with the
+provider-domain contract. A valid result, direct normalized failure, or matching caller-context
+termination remains unchanged for ICGT-010. An invalid result/error combination, raw or wrapped
+error, or fabricated context termination becomes the same correlated fixed `internal_error` after one
+dispatch. Invalid errors are not formatted, unwrapped through `errors.Is`/`errors.As`, retained, or
+exposed; invalid result content is not exposed; and the fixed outcome has no usage. This accepted
+behavior is planned and has no runtime evidence yet.
+
 ICGT-010 owns HTTP status mapping for every admission and provider outcome. For a provider-origin
 failure, it copies the provider-owned `code`, `retryable`, and optional usage observation unchanged;
 it does not reinterpret retryability. Admission owners author their fixed code, safe message,
@@ -183,10 +207,14 @@ do not belong in this shape. Usage remains observation rather than billing proof
 including when it accompanies a failure.
 
 This failed-result shape assumes FastGate has already parsed and admitted a valid `request_id` that
-it can echo. ICGT-009 owns the bounded transport response for malformed or otherwise rejected input
-when no safe identifier is available. Caller authentication is outside this envelope and remains
-unimplemented through ICGT-010; `authentication_failed` means upstream authentication only. The first
-ICGT-020/021 handoff remains loopback-only and unauthenticated. A separate FastGate
+it can echo. The reviewed ICGT-009 plan trusts an ID only after the whole bounded body passes strict
+JSON parsing and the ID independently satisfies the v1 identifier rule. Malformed, oversized,
+read-failed, duplicate-key, invalid-Unicode, non-object, missing-ID, or invalid-ID input receives the
+exact 16-byte ASCII response `invalid request\n`—the text `invalid request` followed by one line-feed
+byte; that response is not a `model_turn.failed` document.
+ICGT-010 later assigns its HTTP status and media type. Caller authentication is outside this envelope
+and remains unimplemented through ICGT-010; `authentication_failed` means upstream authentication
+only. The first ICGT-020/021 handoff remains loopback-only and unauthenticated. A separate FastGate
 authentication/TLS implementation and reviewed profile must precede non-loopback use.
 
 ## Versioning rule

@@ -35,11 +35,11 @@ an individual story is the reviewed contract for one small implementation unit.
 | 6 | [ICGT-006: Specify and version FastGate's model-turn v1 contract](icgt-006-select-fastgate-api.md) | [Defining FastGate model-turn v1](../docs/lessons/icgt-006-selecting-client-protocol.md) | M1 | Done | ICGT-005 | High |
 | 7 | [ICGT-007: Define provider contracts](icgt-007-define-provider-contracts.md) | [Provider contracts](../docs/lessons/icgt-007-provider-contracts.md) | M1 | Done | ICGT-006 | High |
 | 8 | [ICGT-008: Build the basic deterministic fake upstream](icgt-008-build-basic-fake-upstream.md) | [Basic deterministic fake](../docs/lessons/icgt-008-basic-deterministic-fake.md) | M1 | Done | ICGT-007 | High |
+| 9 | [ICGT-009: Admit and execute one fake-backed model turn](icgt-009-admit-and-execute-model-turn.md) | [Bounded model-turn admission](../docs/lessons/icgt-009-bounded-model-turn-admission.md) | M1 | Planned | ICGT-008 | High |
 
-ICGT-001 through ICGT-008 are delivered and validated. ICGT-009 is next in dependency order but is
-not implementation-ready until its reviewed story and lesson are promoted. Promote each later row
-only after its named dependency and start conditions are satisfied; no live provider or public
-inference endpoint is implementation-ready.
+ICGT-001 through ICGT-008 are delivered and validated. ICGT-009 has a reviewed implementation-ready
+contract but has not started. Promote each later row only after its named dependency and start
+conditions are satisfied; no live provider or public inference endpoint is implementation-ready.
 
 ## Later outcome slices
 
@@ -48,7 +48,6 @@ one only by adding a reviewed story and lesson after its dependency evidence exi
 
 | ID | Outcome slice | Depends on |
 | --- | --- | --- |
-| ICGT-009 | Admit and execute one fake-backed model turn without HTTP binding | ICGT-008 |
 | ICGT-010 | Expose one loopback-only fake-backed model turn and map every admitted provider outcome | ICGT-009 |
 | ICGT-011 | Define and test the FastGate-owned model-turn SSE grammar | ICGT-010 |
 | ICGT-012 | Extend the fake with deterministic stream gates and cancellation | ICGT-011 |
@@ -63,16 +62,15 @@ one only by adding a reviewed story and lesson after its dependency evidence exi
 | ICGT-021 | Publish FastGate v1 conformance artifacts and client integration guidance | ICGT-020 |
 | ICGT-022 | Add the first limited Groq upstream path | ICGT-019 |
 
-Before promotion, ICGT-009 must own the complete body and semantic admission boundary: an exact raw
-body cap; the v1 strict JSON and schema profile; a bounded response when no safe `request_id` can be
-recovered; one reviewed fake model alias and unknown-alias rejection; and the v1
-`unsupported_capability` envelope for schema-valid `tool_calls`. That capability failure echoes the
-admitted ID, uses a fixed safe message with `retryable: false` and no usage, validates against the
-failure schema, and proves the fake was called zero times. ICGT-009 does not bind
-the public inference route or map a provider outcome to wire transport. An admitted request invokes
-the fake exactly once and returns its provider-neutral outcome unchanged for ICGT-010.
+The reviewed [ICGT-009 contract](icgt-009-admit-and-execute-model-turn.md) owns the complete body and
+semantic admission boundary: its exact raw cap, strict JSON/schema profile, safe-correlation rule,
+fixed `learning-text` alias for the injected provider port, capability-first rejection, zero-dispatch
+failures, exactly one admitted invocation, and validation of that provider return. The deterministic
+fake supplies the primary zero/one-call evidence. ICGT-009 does not bind the public inference route or
+map a valid provider outcome to wire transport.
 
-ICGT-010 binds the first loopback-only, fake-backed route, defines method/media-type behavior, and
+After ICGT-009 is implemented, ICGT-010 binds the first loopback-only, fake-backed route, defines
+method/media-type behavior, and
 exhaustively maps both completed and normalized failed provider outcomes, including optional failure
 usage. It owns HTTP status mapping for admission and provider outcomes, repeats the `tool_calls`
 ordering test against the fake, and must observe zero calls. It may
