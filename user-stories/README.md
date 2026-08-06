@@ -36,12 +36,12 @@ an individual story is the reviewed contract for one small implementation unit.
 | 7 | [ICGT-007: Define provider contracts](icgt-007-define-provider-contracts.md) | [Provider contracts](../docs/lessons/icgt-007-provider-contracts.md) | M1 | Done | ICGT-006 | High |
 | 8 | [ICGT-008: Build the basic deterministic fake upstream](icgt-008-build-basic-fake-upstream.md) | [Basic deterministic fake](../docs/lessons/icgt-008-basic-deterministic-fake.md) | M1 | Done | ICGT-007 | High |
 | 9 | [ICGT-009: Admit and execute one fake-backed model turn](icgt-009-admit-and-execute-model-turn.md) | [Bounded model-turn admission](../docs/lessons/icgt-009-bounded-model-turn-admission.md) | M1 | Done | ICGT-008 | High |
-| 10 | [ICGT-010: Present model-turn v1 over HTTP](icgt-010-present-model-turn-over-http.md) | [Model-turn HTTP presentation](../docs/lessons/icgt-010-model-turn-http-presentation.md) | M1 | Planned | ICGT-009 | High |
+| 10 | [ICGT-010: Present model-turn v1 over HTTP](icgt-010-present-model-turn-over-http.md) | [Model-turn HTTP presentation](../docs/lessons/icgt-010-model-turn-http-presentation.md) | M1 | Done | ICGT-009 | High |
 
-ICGT-001 through ICGT-009 are delivered and validated. ICGT-010 is implementation-ready but has not
-started: it defines an injectable HTTP handler and wire presentation without mounting an inference
-route in the executable. Promote each later row only after its named dependency and start conditions
-are satisfied. No client-reachable inference route or live provider is implemented.
+ICGT-001 through ICGT-010 are delivered and validated. ICGT-010 implements an injectable HTTP handler
+and wire presentation without mounting an inference route in the executable. ICGT-011 is the next
+outcome slice but is not implementation-ready until its story and lesson are reviewed. No
+client-reachable inference route or live provider is implemented.
 
 ## Later outcome slices
 
@@ -71,12 +71,12 @@ failures, exactly one admitted invocation, and validation of that provider retur
 fake supplies the primary zero/one-call evidence. ICGT-009 does not bind the public inference route or
 map a valid provider outcome to wire transport.
 
-The reviewed [ICGT-010 contract](icgt-010-present-model-turn-over-http.md) is the next implementation
-unit. It defines the exact request target, method and media-type preflight, exhaustive admission and
-provider-outcome presentation, fixed safe statuses and messages, and one real loopback HTTP exchange.
-It repeats the `tool_calls` zero-dispatch proof at the HTTP boundary. The handler is injected and the
-default FastGate executable remains health-only; the strict deterministic fake is used serially in
-tests rather than mounted as a general concurrent runtime provider.
+The delivered [ICGT-010 contract](icgt-010-present-model-turn-over-http.md) implements the exact
+request target, method and media-type preflight, exhaustive admission and provider-outcome
+presentation, fixed safe statuses and messages, context-termination response abort, and real-loopback
+HTTP evidence. It repeats the `tool_calls` zero-dispatch proof at the HTTP boundary. The handler is
+injected and the default FastGate executable remains health-only; the strict deterministic fake is
+used serially in tests rather than mounted as a general concurrent runtime provider.
 
 ICGT-011 remains an outcome slice. It will own mounting health plus inference in the service,
 validating the actual listener as loopback-only, selecting a safe runtime provider or demo policy,
@@ -132,3 +132,6 @@ separately justified; they are never a requirement for Done.
 - [ICGT-009 bounded model-turn admission](notes/2026-08-03-icgt-009-bounded-model-turn-admission.md)
   records the strict admission design, implementation checkpoints, review findings, validation, and
   original combined ICGT-010 handoff plus the later ICGT-010/011 ownership split.
+- [ICGT-010 model-turn HTTP presentation](notes/2026-08-06-icgt-010-model-turn-http-presentation.md)
+  records the handler ownership, four implementation checkpoints, HTTP review findings, validation,
+  and ICGT-011 runtime-assembly handoff.

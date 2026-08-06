@@ -17,7 +17,7 @@ implementation. The detailed dependency-ready sequence lives in [README.md](READ
 - Basic deterministic fake upstream, followed later by streaming/cancellation controls.
 - Completed bounded pre-dispatch model-turn admission includes schema-valid `tool_calls` rejection
   with deterministic zero-dispatch evidence.
-- A reviewed HTTP-presentation unit exhaustively maps completed and failed provider outcomes without
+- A completed HTTP-presentation unit exhaustively maps completed and failed provider outcomes without
   mounting the strict fake in the executable.
 - A later service-binding unit owns actual loopback enforcement, runtime-provider selection, and
   bounded concurrency before the inference route becomes client-reachable.

@@ -13,10 +13,10 @@ ADR 0003 selects a small FastGate-owned model-turn protocol. ICGT-006 publishes 
 non-streaming v1 schema, mapping, fixtures, and offline validation; ICGT-007 defines the downstream
 provider-domain values and synchronous port; ICGT-008 implements its strict basic deterministic
 fake; and ICGT-009 implements bounded strict admission plus one validated injected invocation.
-ICGT-010 is the reviewed planned HTTP-presentation unit; ICGT-011 still owns runtime binding,
-actual-listener loopback enforcement, provider selection, and concurrency. No public inference
-endpoint exists. ADR 0004 selects Go 1.26.5 and one root module, which ICGT-005 materializes with
-lifecycle behavior.
+ICGT-010 implements and tests the injectable HTTP-presentation handler without mounting it in the
+service. ICGT-011 next owns runtime binding, actual-listener loopback enforcement, provider selection,
+and bounded concurrency. No client-reachable inference route exists. ADR 0004 selects Go 1.26.5 and
+one root module, which ICGT-005 materializes with lifecycle behavior.
 
 ## Reviewable package boundaries
 

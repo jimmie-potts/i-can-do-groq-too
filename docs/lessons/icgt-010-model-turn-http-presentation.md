@@ -2,19 +2,19 @@
 
 - **Unit:** ICGT-010
 - **Milestone:** M1 - FastGate non-streaming walking skeleton
-- **Lesson status:** Planned
-- **Implementation status:** Planned; no HTTP presentation package or inference route exists yet
+- **Lesson status:** Verified against implementation
+- **Implementation status:** Implemented and validated; no inference route is mounted
 - **Story:** [ICGT-010](../../user-stories/icgt-010-present-model-turn-over-http.md)
 - **Review priority:** High
-- **Visual companion:** Not required; the Markdown lesson is the planned learning artifact
+- **Visual companion:** Not required; the Markdown lesson is the implementation learning artifact
 - **Related architecture:** [ADR 0002](../adr/0002-fake-first-openai-first-live.md),
   [ADR 0003](../adr/0003-fastgate-api-surface.md),
   [model-turn v1](../../gateway/contracts/model-turn/v1/README.md), and
   [ICGT-009 bounded admission](../../user-stories/icgt-009-admit-and-execute-model-turn.md)
 
-> This lesson describes approved planned behavior, not observed runtime behavior. The proposed
-> `gateway/internal/modelturnhttp` package does not exist yet. The default FastGate command still
-> serves only `GET /healthz`; ICGT-010 does not register an inference route with that command.
+> This lesson links the exact implementation and focused validation delivered by ICGT-010. The
+> default FastGate command still serves only `GET /healthz`; ICGT-010 deliberately does not register
+> the handler with that command.
 
 ## Quick summary
 
@@ -22,11 +22,12 @@ ICGT-009 already accepts bounded request bytes, enforces the strict model-turn v
 unsupported requests before provider work, and returns one closed `modelturn.Outcome`. It deliberately
 does not decide HTTP paths, methods, media types, statuses, headers, or response serialization.
 
-ICGT-010 plans the next layer: one small HTTP handler that presents those existing outcomes without
-changing their meaning. The handler will recognize exactly `POST /v1/model-turns`, reject transport
-mistakes before it calls `Request.Body.Read`, pass the request context and body directly to the
-existing executor, and map each valid non-terminated closed outcome to one bounded HTTP presentation.
-A matching caller-context termination instead aborts the response without inventing protocol meaning.
+ICGT-010 implements the next layer: one small HTTP handler that presents those existing outcomes
+without changing their meaning. The handler recognizes exactly `POST /v1/model-turns`, rejects
+transport mistakes before it calls `Request.Body.Read`, passes the request context and body directly
+to the existing executor, and maps each valid non-terminated closed outcome to one bounded HTTP
+response. A matching caller-context termination instead aborts the response without inventing
+protocol meaning.
 
 This is a handler and presentation story only. It does not attach the handler to the default
 executable, select a runtime provider, enforce a process listener, or define concurrent use of the
@@ -100,10 +101,10 @@ These problems belong to different layers:
 
 | Request problem | Owner | Handler/executor body read? | Provider work? |
 | --- | --- | ---: | ---: |
-| Wrong target or query | Planned HTTP handler | No | No |
-| Wrong method | Planned HTTP handler | No | No |
-| Any content encoding | Planned HTTP handler | No | No |
-| Missing or unsupported media type | Planned HTTP handler | No | No |
+| Wrong target or query | HTTP handler | No | No |
+| Wrong method | HTTP handler | No | No |
+| Any content encoding header or declared trailer | HTTP handler | No | No |
+| Missing, repeated, unsupported, or trailer-declared media type | HTTP handler | No | No |
 | Malformed or schema-invalid JSON | Existing model-turn executor | Yes, within ICGT-009's bound | No |
 | Supported request | Existing executor and provider port | Yes | Exactly once |
 
@@ -117,7 +118,7 @@ handler test proves application ownership; it cannot prove what happened on the 
 ### A handler is not automatically a runnable endpoint
 
 A Go `http.Handler` can be exercised directly or through `httptest.NewServer` without being
-registered in a production command. ICGT-010 plans exactly that: an independently testable handler.
+registered in a production command. ICGT-010 implements exactly that: an independently testable handler.
 
 The current [`service.New`](../../gateway/internal/service/service.go) still installs only its health
 handler, and the current [`main`](../../gateway/cmd/fastgate/main.go) constructs that service. ICGT-010
@@ -127,7 +128,7 @@ during and after this unit.
 ### The server owns request-body closure
 
 The existing executor consumes but deliberately does not close its `io.Reader`. For server requests,
-Go's `http.Server` owns closing `Request.Body` after the handler returns. The planned handler passes
+Go's `http.Server` owns closing `Request.Body` after the handler returns. The handler passes
 `request.Body` directly to the executor and does not add a second close owner.
 
 This distinction matters in tests. A direct `handler.ServeHTTP` call does not reproduce every
@@ -138,7 +139,7 @@ rejection does not read the body; it must not claim to prove server-owned closur
 
 ### One constructor creates the boundary
 
-The planned package exports one constructor:
+The package exports one constructor:
 
 ```go
 NewHandler(*modelturn.Executor) (http.Handler, error)
@@ -157,7 +158,7 @@ The accepted target has one spelling:
 /v1/model-turns
 ```
 
-It also has no query marker or query value. These are different targets and will be rejected:
+It also has no query marker or query value. These different targets are rejected:
 
 ```text
 /v1/model-turns/
@@ -220,6 +221,21 @@ duplicate-identical and RFC 2231 rejection so this check does not quietly broade
 The optional charset is a transport spelling accepted for ordinary client interoperability. It does
 not change the normative model-turn JSON parse profile.
 
+### Declared representation trailers are preflight input
+
+HTTP trailers are fields declared before the body whose values arrive after the body. Go exposes the
+declared keys in `Request.Trailer` when the handler begins, even though their values are not available
+until the body reaches EOF. The handler therefore rejects a declared trailer named `Content-Encoding`
+or `Content-Type` during preflight. This closes a representation-ambiguity path without reading the
+body or starting provider work.
+
+An undeclared content-format trailer is invalid under RFC 9110 because representation metadata needed
+to process the content cannot arrive only after that content. This profile neither merges nor
+interprets such invalid undeclared fields. Discovering one after EOF and changing the result to a late
+`415` would require the HTTP layer to consume the body itself, breaking direct body ownership and the
+rule that representation rejection occurs before provider work. ICGT-010 consequently owns declared
+representation-trailer rejection, not repair of malformed HTTP messages after admission.
+
 ### Request bounds remain owned by ICGT-009
 
 The handler passes `request.Body` directly to
@@ -254,7 +270,7 @@ Outside callers cannot construct a valid mixed state. A valid outcome represents
 3. a correlated internal failure; or
 4. an admitted provider result, normalized failure, or matching caller-context termination.
 
-The planned handler classifies these alternatives through the accessors. It does not parse an
+The handler classifies these alternatives through the accessors. It does not parse an
 existing failure body to rediscover its code, and it does not reinterpret a provider error after the
 provider contract has validated it.
 
@@ -270,13 +286,17 @@ X-Content-Type-Options: nosniff
 A `405` also includes `Allow: POST`. The handler never fabricates `Retry-After`. Provider
 `retryable` is an observation in a model-turn failure body, not a delay or permission to retry.
 
+The response tests inspect `httptest.ResponseRecorder.Result().Header`, not the recorder's mutable
+header map. `Result()` exposes the header snapshot captured when `WriteHeader` committed the response,
+so those assertions prove the safety and media headers existed before commitment.
+
 ### Transport failures use fixed plain text
 
 | Condition | Status | Body | Media type |
 | --- | ---: | --- | --- |
 | Wrong path, encoded alias, trailing slash, or query | `404` | `not found\n` | `text/plain; charset=utf-8` |
 | Exact target with wrong method | `405` | `method not allowed\n` | `text/plain; charset=utf-8` |
-| Any content encoding or invalid media profile | `415` | `unsupported media type\n` | `text/plain; charset=utf-8` |
+| Any content encoding, declared representation trailer, or invalid media profile | `415` | `unsupported media type\n` | `text/plain; charset=utf-8` |
 | Ordinary executor error or invalid returned outcome/accessor state | `500` | `internal server error\n` | `text/plain; charset=utf-8` |
 
 These bodies do not pretend to be `model_turn.failed` documents because the handler has not admitted
@@ -333,7 +353,7 @@ It recognizes a normalized failure by direct `*provider.Failure` assertion; it d
 
 The provider contract permits exact `context.Canceled` or `context.DeadlineExceeded` only when the
 same value is already reported by the supplied caller context. Simply returning would make
-`net/http` synthesize an empty `200`, which would be a false response. For that outcome, the planned
+`net/http` synthesize an empty `200`, which would be a false response. For that outcome, the
 handler directly compares the sentinel and panics with the standard `http.ErrAbortHandler` before any
 application response write. Go's server treats that exact sentinel as an intentional response abort
 and suppresses a panic stack trace.
@@ -349,7 +369,7 @@ remote termination evidence remain outside this unit.
 
 ### Marshal before committing the status
 
-A handler cannot reliably replace an HTTP status after writing headers or body bytes. The planned
+A handler cannot reliably replace an HTTP status after writing headers or body bytes. The
 implementation builds the complete bounded response body before `WriteHeader`.
 
 If serialization unexpectedly fails, the handler can still choose fixed plain-text `500` because no
@@ -382,200 +402,584 @@ mapping.
 
 ## Practical walkthrough
 
-Implementation should proceed through four small review pauses.
+Implementation completed the four approved review pauses. The final package has one exported API and
+321 production lines across two files, [`handler.go`](../../gateway/internal/modelturnhttp/handler.go)
+and [`presentation.go`](../../gateway/internal/modelturnhttp/presentation.go).
 
 ### Checkpoint 1: Exact transport preflight
 
-Implement the exact target, empty-query, method, content-encoding, and media-type checks with fixed
-headers, statuses, and bodies. Before continuing, tests should prove precedence, `Allow: POST`, the
-two accepted JSON media forms, and zero handler/executor body reads and provider calls for every
-rejection.
+The handler implemented exact raw-and-parsed target, method, content-encoding, declared-trailer, and
+media-type checks. Table-driven tests proved precedence, reciprocal raw/parsed target disagreement,
+`Allow: POST`, the two accepted JSON media forms, case-insensitive header inventory, and zero
+handler/executor body reads and provider calls for every rejection.
 
 ### Checkpoint 2: Existing admission outcomes
 
-Pass the accepted request context and body directly to the executor. Map uncorrelated, correlated
-admission, and correlated internal failures through their existing body and code accessors. Prove the
-canonical `tool_calls` request remains a zero-call `422` at the HTTP boundary.
+Accepted requests pass their context and body directly to the executor. The implementation maps
+uncorrelated, correlated admission, and correlated internal failures through the existing body and
+code accessors. The canonical `tool_calls` plus unknown-alias case remains a zero-call `422` at the
+HTTP boundary.
 
 ### Checkpoint 3: Provider result and failure presentation
 
-Marshal completed results and all seven provider failure codes. Preserve request ID, output,
-retryability, and usage absence versus observed zero. Compare representative values semantically with
-the committed completed and unsupported-upstream-output fixtures.
+Typed private structures marshal completed results and all seven provider failure codes. Tests
+preserve request ID, escaped output, retryability, and usage absence versus observed zero, and compare
+representative values semantically with the committed completed and unsupported-upstream-output
+fixtures.
 
 ### Checkpoint 4: Terminal transport behavior
 
-Prove matching cancellation/deadline outcomes produce only `http.ErrAbortHandler`, make zero writes,
-and do not become an implicit `200` through a real server. Also prove serialization finishes before
-status commitment, a failing writer receives no second write, and one proxy-disabled real-loopback
-request uses a timeout, bounded response read, explicit response-body closure, idle-connection
-cleanup, and one strict-fake exchange. Keep the command and service unchanged.
+Direct tests prove matching cancellation and deadline outcomes produce only `http.ErrAbortHandler`,
+touch no response writer, and reach the invoker once. A real-server cancellation test additionally
+proves the result did not pass merely because the client timeout fired. Other tests prove headers are
+present in the commit-time snapshot, a failing writer receives no second write, declared
+representation trailers are rejected before dispatch, and one proxy-disabled serial loopback request
+performs bounded response cleanup before final fake verification. The command and service remain
+unchanged.
 
 ## Personal code review map
 
-| Review path | Current or planned | Why it matters | Question to answer |
-| --- | --- | --- | --- |
-| [`modelturn.Executor`](../../gateway/internal/modelturn/executor.go) | Current | Owns body/semantic admission and the only provider call | Where may provider work first begin? |
-| [`modelturn.Outcome`](../../gateway/internal/modelturn/outcome.go) | Current | Supplies the closed alternatives to map | How can presentation distinguish failures without parsing JSON? |
-| [`provider.Result` and `provider.Failure`](../../gateway/internal/provider/provider.go) | Current | Own output, code, retryability, and usage presence | Which observations must cross unchanged? |
-| [`provider/fake`](../../gateway/internal/provider/fake/fake.go) | Current | Proves exact serial interactions | Why does a fresh fake per test not prove runtime concurrency safety? |
-| [`service.New`](../../gateway/internal/service/service.go) and [`main`](../../gateway/cmd/fastgate/main.go) | Current | Show the command remains health-only | What does ICGT-010 deliberately leave unwired? |
-| [Completed schema](../../gateway/contracts/model-turn/v1/schema/success.schema.json) and [failure schema](../../gateway/contracts/model-turn/v1/schema/failure.schema.json) | Current contract | Define response shape | How is optional usage represented? |
-| Planned `modelturnhttp.NewHandler` | Planned; no file exists | Will reject a nil executor and own HTTP preflight/presentation | Does one accepted request lead to one prepared response? |
-| Planned `modelturnhttp` tests | Planned; no file exists | Must prove zero handler-read, zero-dispatch, exhaustive mapping, and write behavior | Which test proves precedence and usage absence versus zero? |
+| Review path | Why it matters | Question to answer |
+| --- | --- | --- |
+| [`NewHandler`, `ServeHTTP`, and transport preflight](../../gateway/internal/modelturnhttp/handler.go) | Own the one exported boundary, exact check order, and final write | Where can the body first reach the executor? |
+| [Outcome and JSON presentation](../../gateway/internal/modelturnhttp/presentation.go) | Exhaustively maps closed outcomes and preserves optional usage | Why is a nil usage pointer different from a pointer to zero values? |
+| [Target, media, and zero-read tests](../../gateway/internal/modelturnhttp/handler_test.go) | Pin reciprocal raw/parsed checks, lexical media rules, declared trailers, and commit-time headers | Which assertion proves a transport rejection did not read or dispatch? |
+| [Admission tests](../../gateway/internal/modelturnhttp/admission_test.go) | Prove ICGT-009 failures cross HTTP unchanged | Why does `tool_calls` still win over an unknown alias? |
+| [Result, failure, and fixture tests](../../gateway/internal/modelturnhttp/presentation_test.go) | Pin all seven provider failures, usage presence, escaping, and compact framing | Which pair distinguishes absent usage from observed zero? |
+| [Abort, writer, trailer, HEAD, and loopback tests](../../gateway/internal/modelturnhttp/server_test.go) | Exercise direct-writer semantics and real `net/http` behavior | Why are both direct and real-server tests necessary? |
+| [`modelturn.Executor`](../../gateway/internal/modelturn/executor.go) and [`modelturn.Outcome`](../../gateway/internal/modelturn/outcome.go) | Continue to own admission, the only provider call, and closed alternatives | Which meaning is reused rather than duplicated by HTTP? |
+| [`service.New`](../../gateway/internal/service/service.go) and [`main`](../../gateway/cmd/fastgate/main.go) | Show the executable remains health-only | What does ICGT-011 still need to assemble? |
 
 ## Implementation code samples
 
-The following examples are **PSEUDOCODE ONLY**. They are not current Go APIs and must be replaced by
-focused exact excerpts after implementation.
+These focused excerpts are copied from the implementation. Read them as ownership boundaries rather
+than as independent snippets to paste elsewhere.
 
-### Transport checks before body admission
+### 1. Construct the handler and finish preflight before execution
 
-```text
-PSEUDOCODE ONLY
+[`NewHandler`, `ServeHTTP`, and `transportRejection`](../../gateway/internal/modelturnhttp/handler.go)
+keep construction, preflight, execution, and writing in one visible order:
 
-set no-store and nosniff headers
+```go
+func NewHandler(executor *modelturn.Executor) (http.Handler, error) {
+	if executor == nil {
+		return nil, errors.New("model-turn HTTP executor is required")
+	}
+	return modelTurnHandler{executor: executor}, nil
+}
 
-if raw and parsed target are not exactly origin-form /v1/model-turns:
-    write fixed 404 plain text
-    return
+func (handler modelTurnHandler) ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) {
+	response, rejected := transportRejection(request)
+	if !rejected {
+		outcome, err := handler.executor.Execute(request.Context(), request.Body)
+		response = prepareOutcome(outcome, err)
+	}
+	writePreparedResponse(responseWriter, response)
+}
 
-if method is not POST:
-    set Allow to POST
-    write fixed 405 plain text
-    return
-
-if Content-Encoding exists or Content-Type is not one approved JSON form:
-    write fixed 415 plain text
-    return
-
-outcome, ordinary_error = executor.Execute(request.Context(), request.Body)
-present(outcome, ordinary_error)
+func transportRejection(request *http.Request) (preparedResponse, bool) {
+	if !hasExactTarget(request) {
+		return prepareTextResponse(http.StatusNotFound, notFoundBody, ""), true
+	}
+	if request.Method != http.MethodPost {
+		return prepareTextResponse(http.StatusMethodNotAllowed, methodNotAllowedBody, http.MethodPost), true
+	}
+	_, hasEncoding := headerFieldValues(request.Header, "Content-Encoding")
+	_, hasEncodingTrailer := headerFieldValues(request.Trailer, "Content-Encoding")
+	if hasEncoding || hasEncodingTrailer {
+		return prepareTextResponse(http.StatusUnsupportedMediaType, unsupportedMediaTypeBody, ""), true
+	}
+	contentTypes, _ := headerFieldValues(request.Header, "Content-Type")
+	_, hasContentTypeTrailer := headerFieldValues(request.Trailer, "Content-Type")
+	if hasContentTypeTrailer ||
+		len(contentTypes) != 1 || !acceptsJSONMediaType(contentTypes[0]) {
+		return prepareTextResponse(http.StatusUnsupportedMediaType, unsupportedMediaTypeBody, ""), true
+	}
+	return preparedResponse{}, false
+}
 ```
 
-The body is untouched until transport checks pass. The executor remains the only request-byte and
-JSON-admission owner.
+The handler does not ask the writer for its header map until execution has produced one complete
+`preparedResponse`. More importantly, target, method, ordinary headers, and already declared trailer
+keys all reject before `Executor.Execute` can read the body or invoke a provider.
 
-### Classify the closed outcome
+### 2. Require reciprocal raw and parsed target agreement
 
-```text
-PSEUDOCODE ONLY
+[`hasExactTarget`](../../gateway/internal/modelturnhttp/handler.go) accepts only one origin-form
+spelling. Both representations must agree:
 
-if ordinary_error exists:
-    prepare fixed plain-text 500
-else if failure body exists:
-    choose status from optional admitted failure code
-    use the existing copied failure body
-else if provider outcome exists:
-    if completed result:
-        marshal completed envelope
-    else if direct provider failure:
-        marshal failed envelope with fixed message
-    else if matching caller-context termination:
-        panic with exact http.ErrAbortHandler before any write
-    else:
-        prepare fixed plain-text 500
-else:
-    prepare fixed plain-text 500
+```go
+func hasExactTarget(request *http.Request) bool {
+	if request == nil || request.RequestURI != modelTurnPath || request.URL == nil {
+		return false
+	}
+	return request.URL.Path == modelTurnPath &&
+		request.URL.RawPath == "" &&
+		request.URL.RawQuery == "" &&
+		!request.URL.ForceQuery &&
+		request.URL.Scheme == "" &&
+		request.URL.Host == "" &&
+		request.URL.Opaque == ""
+}
 ```
 
-The implementation must remain explicit. It should not use reflection, body parsing, or a generic
-response framework.
+This is stronger than checking only the decoded path. The target suite contains reciprocal cases:
+an exact `RequestURI` with a different parsed path, and an exact parsed URL with a different
+`RequestURI`. Either incomplete implementation fails one side of that pair.
 
-### Commit one prepared response
+### 3. Count fields lexically before normalizing the media type
 
-```text
-PSEUDOCODE ONLY
+[`headerFieldValues` and `acceptsJSONMediaType`](../../gateway/internal/modelturnhttp/handler.go) make
+field presence, case-insensitive key matching, and the intentionally narrow parameter grammar
+explicit:
 
-body, marshal_error = build_complete_bounded_body()
-if marshal_error:
-    body = fixed internal-server-error text
-    status = 500
-    media_type = text/plain
+```go
+func headerFieldValues(header http.Header, name string) ([]string, bool) {
+	var values []string
+	present := false
+	for fieldName, fieldValues := range header {
+		if strings.EqualFold(fieldName, name) {
+			present = true
+			values = append(values, fieldValues...)
+		}
+	}
+	return values, present
+}
 
-set Content-Type
-write status once
-write body once
+func acceptsJSONMediaType(value string) bool {
+	semicolonCount := strings.Count(value, ";")
+	if semicolonCount > 1 {
+		return false
+	}
+	if semicolonCount == 1 {
+		_, rawParameter, _ := strings.Cut(value, ";")
+		rawName, _, hasValue := strings.Cut(rawParameter, "=")
+		if !hasValue || !strings.EqualFold(strings.TrimSpace(rawName), "charset") {
+			return false
+		}
+	}
 
-if body write fails:
-    return
+	mediaType, parameters, err := mime.ParseMediaType(value)
+	if err != nil || !strings.EqualFold(mediaType, jsonMediaType) {
+		return false
+	}
+	if semicolonCount == 0 {
+		return len(parameters) == 0
+	}
+	if len(parameters) != 1 {
+		return false
+	}
+	for name, parameterValue := range parameters {
+		return strings.EqualFold(name, "charset") && strings.EqualFold(parameterValue, "utf-8")
+	}
+	return false
+}
 ```
 
-There is no alternate terminal write, provider reinvocation, response retry, or error logging.
+The lexical pass prevents `mime.ParseMediaType` from broadening the endpoint through duplicate or
+RFC 2231 parameters. The parser still owns syntax and normalized value validation.
+
+### 4. Classify the closed outcome without reparsing it
+
+[`prepareOutcome` and `prepareProviderOutcome`](../../gateway/internal/modelturnhttp/presentation.go)
+read every public accessor once, validate the allowed combination, and treat matching termination as
+control flow:
+
+```go
+func prepareOutcome(outcome modelturn.Outcome, executeErr error) preparedResponse {
+	if executeErr != nil {
+		return prepareInternalResponse()
+	}
+
+	requestID, hasRequestID := outcome.RequestID()
+	failureBody, hasFailureBody := outcome.FailureBody()
+	failureCode, hasFailureCode := outcome.FailureCode()
+	result, providerErr, hasProviderOutcome := outcome.ProviderOutcome()
+
+	switch {
+	case hasFailureBody && !hasRequestID && !hasFailureCode && !hasProviderOutcome:
+		return prepareBytesResponse(http.StatusBadRequest, textMediaType, failureBody)
+	case hasFailureBody && hasRequestID && hasFailureCode && !hasProviderOutcome:
+		status, ok := admissionFailureStatus(failureCode)
+		if !ok || requestID == "" {
+			return prepareInternalResponse()
+		}
+		return prepareBytesResponse(status, jsonMediaType, failureBody)
+	case !hasFailureBody && hasRequestID && !hasFailureCode && hasProviderOutcome:
+		if requestID == "" {
+			return prepareInternalResponse()
+		}
+		return prepareProviderOutcome(requestID, result, providerErr)
+	default:
+		return prepareInternalResponse()
+	}
+}
+
+func prepareProviderOutcome(requestID string, result provider.Result, providerErr error) preparedResponse {
+	if providerErr == nil {
+		return prepareCompletedResponse(requestID, result)
+	}
+	if providerErr == context.Canceled || providerErr == context.DeadlineExceeded {
+		panic(http.ErrAbortHandler)
+	}
+	failure, ok := providerErr.(*provider.Failure)
+	if !ok || failure == nil {
+		return prepareInternalResponse()
+	}
+	return prepareProviderFailureResponse(requestID, failure)
+}
+```
+
+The HTTP layer never parses `FailureBody` to rediscover its code and never unwraps or formats a
+provider error. Because `prepareProviderOutcome` panics before returning a prepared response,
+`ServeHTTP` never reaches `writePreparedResponse` for a matching caller termination.
+
+### 5. Preserve usage absence with a typed pointer
+
+The private response types in [`presentation.go`](../../gateway/internal/modelturnhttp/presentation.go)
+use a pointer plus `omitempty`; [`prepareUsage`](../../gateway/internal/modelturnhttp/presentation.go)
+creates the pointer even when both observed counters are zero:
+
+```go
+type usageResponse struct {
+	InputTokens  int64 `json:"input_tokens"`
+	OutputTokens int64 `json:"output_tokens"`
+}
+
+type completedResponse struct {
+	Version    string         `json:"version"`
+	Kind       string         `json:"kind"`
+	RequestID  string         `json:"request_id"`
+	OutputText string         `json:"output_text"`
+	Usage      *usageResponse `json:"usage,omitempty"`
+}
+
+func prepareUsage(usage provider.Usage, present bool) *usageResponse {
+	if !present {
+		return nil
+	}
+	return &usageResponse{InputTokens: usage.InputTokens, OutputTokens: usage.OutputTokens}
+}
+```
+
+`nil` means the provider supplied no usage observation. `&usageResponse{}` means it explicitly
+reported zero. `encoding/json` omits only the first state.
+
+### 6. Commit one already prepared response
+
+[`writePreparedResponse`](../../gateway/internal/modelturnhttp/handler.go) is deliberately small:
+
+```go
+func writePreparedResponse(responseWriter http.ResponseWriter, response preparedResponse) {
+	headers := responseWriter.Header()
+	headers.Set("Cache-Control", "no-store")
+	headers.Set("Content-Type", response.mediaType)
+	headers.Set("X-Content-Type-Options", "nosniff")
+	if response.allowMethod != "" {
+		headers.Set("Allow", response.allowMethod)
+	}
+	responseWriter.WriteHeader(response.status)
+	_, _ = responseWriter.Write(response.body)
+}
+```
+
+Every serializer runs before this function. It obtains the header map once, commits status once, and
+attempts one body write. There is no alternate terminal write, provider reinvocation, response retry,
+or error formatting.
+
+## Test excerpts: prove the boundary, not only the returned body
+
+### Transport rejection reads and dispatches zero times
+
+The shared assertion loop in
+[`TestHandlerRejectsTransportBeforeBodyReadOrProviderDispatch`](../../gateway/internal/modelturnhttp/handler_test.go)
+uses a recording body and a fresh empty fake:
+
+```go
+upstream := newTestFake(t)
+handler := newTestHandler(t, upstream)
+body := &recordingRequestBody{}
+request := httptest.NewRequest(test.method, test.target, body)
+request.Header = test.headers.Clone()
+request.Trailer = test.trailers.Clone()
+response := httptest.NewRecorder()
+
+handler.ServeHTTP(response, request)
+
+assertHTTPResponse(
+	t,
+	response,
+	test.wantStatus,
+	textMediaType,
+	test.wantBody,
+	test.wantAllow,
+)
+if body.reads != 0 {
+	t.Fatalf("request body Read() calls = %d, want 0", body.reads)
+}
+if body.closes != 0 {
+	t.Fatalf("request body Close() calls = %d, want server-owned closure", body.closes)
+}
+if err := upstream.VerifyComplete(); err != nil {
+	t.Fatalf("zero-dispatch fake was not complete: %v", err)
+}
+```
+
+The cases include target/method/media precedence, empty and noncanonical encoding fields, repeated
+content types, lexical media traps, and declared representation trailer keys.
+
+### Header assertions read the commit-time snapshot
+
+[`assertHTTPMetadata`](../../gateway/internal/modelturnhttp/handler_test.go) calls `Result()` before it
+checks headers:
+
+```go
+result := response.Result()
+if result.StatusCode != wantStatus {
+	t.Fatalf("status = %d, want %d", result.StatusCode, wantStatus)
+}
+if got := result.Header.Get("Content-Type"); got != wantMediaType {
+	t.Fatalf("Content-Type = %q, want %q", got, wantMediaType)
+}
+if got := result.Header.Get("Cache-Control"); got != "no-store" {
+	t.Fatalf("Cache-Control = %q, want no-store", got)
+}
+if got := result.Header.Get("X-Content-Type-Options"); got != "nosniff" {
+	t.Fatalf("X-Content-Type-Options = %q, want nosniff", got)
+}
+if got := result.Header.Get("Allow"); got != wantAllow {
+	t.Fatalf("Allow = %q, want %q", got, wantAllow)
+}
+```
+
+`httptest.ResponseRecorder.Result().Header` is the snapshot captured at `WriteHeader`; reading
+`response.Header()` instead would inspect the mutable map and would not prove header timing.
+
+### Direct and real-server tests prove the abort path differently
+
+The direct test in
+[`TestHandlerAbortsMatchingContextTerminationBeforeWriterAccess`](../../gateway/internal/modelturnhttp/server_test.go)
+recovers the exact sentinel and proves even `Header()` was untouched:
+
+```go
+panicValue, panicked := capturePanic(func() {
+	handler.ServeHTTP(writer, request)
+})
+
+if !panicked || panicValue != http.ErrAbortHandler {
+	t.Fatalf("ServeHTTP() panic = (%v, %t), want exact http.ErrAbortHandler", panicValue, panicked)
+}
+if invoker.calls.Load() != 1 {
+	t.Fatalf("Invoke() calls = %d, want 1", invoker.calls.Load())
+}
+if writer.headerCalls != 0 || writer.writeHeaderCalls != 0 || writer.writeCalls != 0 {
+	t.Fatalf(
+		"writer calls = (Header %d, WriteHeader %d, Write %d), want all zero",
+		writer.headerCalls,
+		writer.writeHeaderCalls,
+		writer.writeCalls,
+	)
+}
+```
+
+The real-server regression in
+[`TestRealServerAbortReachesInvokerAndDoesNotBecomeImplicitOK`](../../gateway/internal/modelturnhttp/server_test.go)
+also proves the client deadline did not manufacture the passing result:
+
+```go
+response, requestErr := client.Do(request)
+transport.CloseIdleConnections()
+
+if requestCtx.Err() != nil {
+	t.Fatalf("request context ended before server abort was observed: %v", requestCtx.Err())
+}
+if requestErr == nil || response != nil {
+	if response != nil {
+		_ = response.Body.Close()
+	}
+	t.Fatalf("client.Do() = (response %v, error %v), want no HTTP response", response, requestErr)
+}
+if invoker.calls.Load() != 1 {
+	t.Fatalf("Invoke() calls = %d, want reached exactly once", invoker.calls.Load())
+}
+```
+
+The server wrapper cancels a child of the accepted request context before calling the real handler.
+The exact-one counter prevents a vacuous pass where the request never reached execution; the nil
+client-context error proves the observed failure came from the server abort rather than timeout.
+
+### A real server exposes declared trailer keys before body admission
+
+[`TestRealServerRejectsDeclaredRepresentationTrailersBeforeDispatch`](../../gateway/internal/modelturnhttp/server_test.go)
+sends a chunked request whose trailer name is declared up front:
+
+```go
+request.Header.Set("Content-Type", jsonMediaType)
+request.ContentLength = -1
+request.Trailer = http.Header{test.trailerName: {"declared-value"}}
+
+response, err := client.Do(request)
+if err != nil {
+	t.Fatalf("request with declared trailer returned an error: %v", err)
+}
+body := readAndCloseResponse(t, response)
+transport.CloseIdleConnections()
+
+assertServerResponseHeaders(
+	t,
+	response,
+	http.StatusUnsupportedMediaType,
+	textMediaType,
+	"",
+)
+if got := string(body); got != unsupportedMediaTypeBody {
+	t.Fatalf("body = %q, want %q", got, unsupportedMediaTypeBody)
+}
+if calls.Load() != 0 {
+	t.Fatalf("Invoke() calls = %d, want 0", calls.Load())
+}
+```
+
+Both `Content-Encoding` and a trailer-declared second `Content-Type` take this path. The test proves
+real `net/http` request parsing exposes the declaration early enough for zero-dispatch preflight.
+
+### The serial loopback test closes every resource before fake verification
+
+The happy path in
+[`TestSerialChunkedLoopbackModelTurnCleansUpAndCompletesFake`](../../gateway/internal/modelturnhttp/server_test.go)
+uses an explicit timeout and proxy-free transport, then performs response cleanup before
+`VerifyComplete`:
+
+```go
+client, transport := newLoopbackClient()
+
+requestCtx, cancelRequest := context.WithTimeout(context.Background(), testClientTimeout)
+defer cancelRequest()
+request, err := http.NewRequestWithContext(
+	requestCtx,
+	http.MethodPost,
+	server.URL+modelTurnPath,
+	bytes.NewReader(marshalTestDocument(t, document)),
+)
+if err != nil {
+	t.Fatalf("http.NewRequestWithContext() returned an error: %v", err)
+}
+request.Header.Set("Content-Type", jsonMediaType)
+request.ContentLength = -1
+response, err := client.Do(request)
+if err != nil {
+	t.Fatalf("model-turn request returned an error: %v", err)
+}
+body := readAndCloseResponse(t, response)
+transport.CloseIdleConnections()
+
+assertServerResponseHeaders(t, response, http.StatusOK, jsonMediaType, "")
+assertJSONDocument(t, body, map[string]any{
+	"version":     modelTurnVersion,
+	"kind":        completedKind,
+	"request_id":  document.RequestID,
+	"output_text": result.OutputText(),
+	"usage":       expectedUsage(*usage),
+})
+if err := upstream.VerifyComplete(); err != nil {
+	t.Fatalf("VerifyComplete() after response cleanup returned an error: %v", err)
+}
+```
+
+`newLoopbackClient` sets `Proxy: nil`. `readAndCloseResponse` reads through an
+`io.LimitReader`, rejects more than 1 MiB, and closes the body before idle connections are closed.
+The fresh strict fake is used serially; this test intentionally proves no concurrent runtime policy.
 
 ## Failure scenarios to study
 
-| Failure | Responsible boundary | Planned safe result | Deterministic evidence |
+| Failure | Responsible boundary | Observed safe result | Deterministic evidence |
 | --- | --- | --- | --- |
-| Encoded path, trailing slash, or query | HTTP target admission | Fixed `404`; no read or call | Recording body plus empty fake |
-| Wrong method on exact target | HTTP method admission | Fixed `405` and `Allow: POST`; no read or call | Header and zero-read assertions |
-| Missing, repeated, malformed, or unsupported media type | HTTP representation admission | Fixed `415`; no read or call | Table-driven media matrix |
-| Any `Content-Encoding` | HTTP representation admission | Fixed `415`; no decompression or read | Encoding table and empty fake |
-| Malformed body without safe ID | Existing executor | Existing `invalid request\n` with `400` | Exact body and status |
-| Valid ID with invalid request shape | Existing executor | Existing `invalid_request` with `400` | Exact body and zero calls |
-| `tool_calls` plus unknown alias | Existing executor | `unsupported_capability` with `422`; capability wins | Empty fake verification |
-| Completed result with absent usage | HTTP presentation | `200` JSON omits usage | Exact field inventory |
-| Completed result with observed-zero usage | HTTP presentation | `200` JSON includes zero counters | Absence-versus-zero pair |
-| Provider failure with usage | HTTP presentation | Fixed status/message; exact code, retryability, and usage | Every-code table |
-| Matching canceled or expired context | Request control flow | Exact response abort; no application write or implicit `200` | Counting writer plus reached-once real-server path |
-| Ordinary executor error or invalid returned outcome/accessor state | HTTP safety fallback | Fixed plain-text `500` | Safe fallback test |
-| Body write failure after commitment | HTTP writer | Return after one write; no retry | Failing writer and call counts |
+| Encoded path, trailing slash, query, or raw/parsed disagreement | HTTP target admission | Fixed `404`; no read or call | [`TestExactTargetRequiresOneOriginFormSpelling`](../../gateway/internal/modelturnhttp/handler_test.go) and the transport matrix |
+| Wrong method on the exact target | HTTP method admission | Fixed `405` and `Allow: POST`; no read or call | [`TestHandlerRejectsTransportBeforeBodyReadOrProviderDispatch`](../../gateway/internal/modelturnhttp/handler_test.go) |
+| Missing, repeated, malformed, or unsupported media type | HTTP representation admission | Fixed `415`; no read or call | [`TestJSONMediaTypeProfile`](../../gateway/internal/modelturnhttp/handler_test.go) and the transport matrix |
+| Encoding header or declared representation trailer | HTTP representation admission | Fixed `415`; no decompression, body read, or call | Direct matrix plus [`TestRealServerRejectsDeclaredRepresentationTrailersBeforeDispatch`](../../gateway/internal/modelturnhttp/server_test.go) |
+| Malformed, unsafe-ID, read-failed, or oversized body | Existing executor | Existing `invalid request\n` with `400` | [`TestHandlerPresentsUncorrelatedAdmissionFailures`](../../gateway/internal/modelturnhttp/admission_test.go) |
+| Valid ID with invalid shape or alias | Existing executor | Existing `invalid_request` with `400`; zero calls | [`TestHandlerPresentsCorrelatedAdmissionFailuresWithoutParsingTheirBodies`](../../gateway/internal/modelturnhttp/admission_test.go) |
+| `tool_calls` plus unknown alias | Existing executor | `unsupported_capability` with `422`; capability wins | Same correlated-admission table and empty fake |
+| Completed result with absent versus observed-zero usage | HTTP presentation | `200`; usage omitted versus present with zero counters | [`TestHandlerPresentsCompletedResultsAndUsagePresence`](../../gateway/internal/modelturnhttp/presentation_test.go) |
+| Normalized provider failure | HTTP presentation | Locked status/message; exact code, retryability, and optional usage | [`TestHandlerPresentsEveryNormalizedProviderFailure`](../../gateway/internal/modelturnhttp/presentation_test.go) |
+| Matching canceled or expired context | Request control flow | Exact response abort; no writer access or implicit `200` | Direct and reached-once, non-timeout real-server tests in [`server_test.go`](../../gateway/internal/modelturnhttp/server_test.go) |
+| Ordinary executor error or invalid outcome/accessor state | HTTP safety fallback | Fixed plain-text `500`; unsafe error not formatted | [`TestHandlerFallsBackSafelyForOrdinaryExecutorAndInvalidOutcomeState`](../../gateway/internal/modelturnhttp/admission_test.go) |
+| Marshal or body-write failure | HTTP response boundary | Precommit fixed `500`, or return after exactly one committed write; no retry | [`TestMarshalFailureFallsBackBeforeResponseCommitWithoutFormatting`](../../gateway/internal/modelturnhttp/presentation_test.go) and [`TestHandlerDoesNotRetryAfterResponseWriteFailure`](../../gateway/internal/modelturnhttp/server_test.go) |
 | Concurrent strict-fake use | Outside ICGT-010 | Not attempted | Explicit deferral and race gate |
 
-## Planned test and validation evidence
+## Test and validation evidence
 
-The implementation should add focused evidence for:
+The focused suite is divided by review boundary:
 
-- the exact `NewHandler` signature and nil-executor error;
-- exact target and trailing, encoded, query, forced-query, absolute-form, authority, and opaque variants;
-- method/target/media precedence;
-- all accepted and rejected content-type forms, including duplicate-identical and RFC 2231
-  parameters, and every content-encoding field;
-- zero handler/executor body reads and zero fake calls for transport rejection without claiming zero
-  server buffering or draining;
-- representative uncorrelated, invalid, unsupported-capability, alias, and admitted requests;
-- completed result usage absent, observed zero, and nonzero;
-- output requiring JSON escaping and exact request-ID echo;
-- all provider failure codes, retryability values, and usage-presence states;
-- semantic parity with committed v1 fixtures plus compact JSON with no trailing line feed;
-- matching cancellation and deadline with exact `http.ErrAbortHandler` and zero application writes,
-  plus a real-server case whose server-side canceled child context and counting termination invoker
-  prove one dispatch before the client receives no response instead of an implicit `200`;
-- direct and real-server HEAD behavior;
-- a writer failure with no second write or redispatch; and
-- one serial `httptest.NewServer` request using a proxy-disabled client and request timeout, a bounded
-  response read, explicit response-body closure, idle-connection cleanup, and then `VerifyComplete`.
+| Test file | Observed evidence |
+| --- | --- |
+| [`handler_test.go`](../../gateway/internal/modelturnhttp/handler_test.go) | Constructor error, reciprocal exact-target inventory, transport precedence, ordinary and trailer field presence, zero body reads/closes, lexical media profile, direct HEAD body, and commit-time header snapshot |
+| [`admission_test.go`](../../gateway/internal/modelturnhttp/admission_test.go) | Uncorrelated and correlated ICGT-009 failures, capability-before-alias behavior, invalid provider replacement, safe ordinary fallback, and direct body ownership |
+| [`presentation_test.go`](../../gateway/internal/modelturnhttp/presentation_test.go) | Escaped completed output, absent/zero/nonzero usage, all seven provider failures, semantic fixture parity, compact framing, and safe precommit marshal fallback |
+| [`server_test.go`](../../gateway/internal/modelturnhttp/server_test.go) | Direct and real abort semantics, non-timeout/reached-once evidence, exact writer calls, direct versus wire HEAD behavior, real declared-trailer rejection, bounded loopback cleanup, and complete fake consumption |
 
-After implementation, run focused and repeated tests, applicable `go vet` and race checks, the
-[PR review regression checklist](../pr-review-checklist.md), an independent adversarial review, and
-`./scripts/check`. These are planned commands, not current validation evidence.
+These focused commands passed:
+
+```text
+GOCACHE=/tmp/icgt010-go-cache TMPDIR=/tmp go test ./gateway/internal/modelturnhttp
+GOCACHE=/tmp/icgt010-go-cache TMPDIR=/tmp go test -count=20 ./gateway/internal/modelturnhttp
+GOCACHE=/tmp/icgt010-go-cache TMPDIR=/tmp go vet ./gateway/internal/modelturnhttp
+GOCACHE=/tmp/icgt010-go-cache-race TMPDIR=/tmp go test -race ./gateway/internal/modelturnhttp
+```
+
+They ran outside the restricted tool sandbox only because `httptest.NewServer` needed to bind local
+loopback sockets; they remained offline and credential-free. The final repository-wide
+`TMPDIR=/tmp GOCACHE=/tmp/icgt010-full-gocache ./scripts/check` also passed: it checked 122 repository
+files, ran 52 policy tests, validated the model-turn fixtures, and passed all Go tests and race tests.
 
 ## Speed and size implications
 
 ICGT-010 adds no provider call, retry, timer, queue, or background goroutine beyond the one invocation
 already owned by ICGT-009.
 
-The handler will marshal one complete non-streaming provider outcome before committing a status. That
+The handler marshals one complete non-streaming provider outcome before committing a status. That
 creates one response-sized byte slice proportional to an already bounded result. It also means the
 first response byte cannot be written until the complete result is available and serialized. This is
 expected for the current non-streaming contract; later streaming work owns incremental time to first
 byte.
 
 The handler creates no second whole-request buffer. The existing 8 MiB-plus-one admission bound
-remains unchanged. This planned unit makes no measured latency, throughput, allocation, or exact
-serialized-size claim before implementation evidence exists.
+remains unchanged. The final implementation is 321 production lines across two files and exposes only
+`NewHandler`. It uses the Go standard library plus existing repository packages, adds no external
+dependency, and produces no `go.sum`. No benchmark was run, so this unit makes no measured latency,
+throughput, allocation, or exact serialized-size claim.
 
 ## What changed during implementation
 
-No runtime implementation exists yet, so there are no observed implementation changes to report.
-
-Implementation review must revisit whether raw-path checks reject every encoded alias, repeated
-headers remain unambiguous, all provider failure and usage-presence states are covered, every JSON
-body is prepared before status commitment, matching termination causes zero writes, and no test uses
-the single-owner fake concurrently.
-
-After code exists, replace this section with actual failed assumptions, review discoveries, design
-changes, and validation. Do not mark this lesson verified while this section remains speculative.
+- The first complete handler/presenter draft was 364 production lines. A split review simplified the
+  explicit control flow to 319 lines without introducing a framework, reflection, or a second public
+  abstraction. Representation-trailer safety review then added two lines, producing the final
+  321-line package.
+- HTTP review found that representation metadata can be declared as trailer keys before body values
+  arrive. The handler now detects `Content-Encoding` and `Content-Type` in `Request.Trailer` during
+  preflight. Direct tests prove fixed `415` with zero handler/executor body reads and zero provider
+  calls; the real-server test proves declared keys are visible during preflight and dispatch remains
+  at zero calls.
+- The same review distinguished declared trailers from invalid undeclared content-format trailers.
+  RFC 9110 does not permit processing-critical representation metadata to arrive only after the
+  content. This profile does not merge or interpret such malformed late fields, and it does not read
+  the body merely to invent a late `415`; doing so would break direct executor body ownership and the
+  zero-work preflight invariant.
+- Target review added reciprocal disagreement cases: exact raw target with a different parsed path,
+  and exact parsed URL with a different raw target. These make a one-sided target check observably
+  fail instead of relying only on encoded-path examples.
+- Header-timing review changed assertions to read `httptest.ResponseRecorder.Result().Header`, the
+  snapshot captured at `WriteHeader`, rather than the recorder's mutable header map. The counting
+  writer separately proves exactly one `Header`, `WriteHeader`, and `Write` call on an ordinary
+  completed response.
+- The first real-server abort assertion could have passed for the wrong reason if its client deadline
+  expired. The final test asserts the client request context is still live and the termination invoker
+  ran exactly once before accepting the no-response transport error.
+- The strict fake remains fresh and serial in every test. Real loopback coverage does not turn it into
+  a concurrency-safe runtime provider, and neither the health-only service nor executable changed.
+- No provider SDK, external dependency, route registration, listener policy, retry, goroutine, timer,
+  queue, logger, visual lesson, `go.sum`, or `go.work` was introduced.
 
 ## Production expansion
 
@@ -611,9 +1015,9 @@ These are standard-library or specification references, not new framework depend
 
 | Dimension | ICGT-010 | Production expansion |
 | --- | --- | --- |
-| Exposure | Independently tested handler only | Explicitly registered and operated route |
+| Exposure | Implemented, independently tested handler only | Explicitly registered and operated route |
 | Provider | Fresh serial strict fake in tests | Runtime-selected concurrency-safe adapter |
-| Network boundary | One `httptest` loopback exchange | Enforced listener, TLS, and authentication policy |
+| Network boundary | Focused `httptest` loopback evidence | Enforced listener, TLS, and authentication policy |
 | Concurrency | Deliberately unclaimed | Bounded active requests and owned rejection policy |
 | Response mode | Fully buffered non-streaming JSON | Versioned SSE with cancellation and backpressure |
 | Failures | Fixed safe presentation | Operational correlation, metrics, and incident evidence |
@@ -622,9 +1026,9 @@ These are standard-library or specification references, not new framework depend
 
 ### Trade-offs and graduation signals
 
-The planned handler stays small because it trusts already validated internal values and does not own
-runtime concurrency. This makes HTTP mapping personally reviewable and prevents the strict fake from
-quietly becoming a production server component.
+The implemented handler stays small because it trusts already validated internal values and does not
+own runtime concurrency. This makes HTTP mapping personally reviewable and prevents the strict fake
+from quietly becoming a production server component.
 
 A runtime endpoint becomes justified only when the next story can name the provider instance used by
 the process, how simultaneous requests are bounded or rejected, which listener addresses are
@@ -641,6 +1045,8 @@ sequence can prove those behaviors deterministically and a workload benefits fro
 - Predict the response for `GET /v1/model-turns?debug=true` and explain which check wins.
 - Compare a missing `Content-Type` with malformed JSON: identify which layer rejects each and whether
   the body is read.
+- Explain why a declared `Content-Encoding` trailer can be rejected during preflight but an invalid
+  undeclared late field cannot be turned into a new `415` without changing body ownership.
 - Write the expected completed JSON for absent usage, then for present zero usage.
 - Trace `authentication_failed` from `provider.Failure` to its fixed message and explain why the
   result is not a caller `401`.
@@ -651,6 +1057,8 @@ sequence can prove those behaviors deterministically and a workload benefits fro
 ## Key takeaways
 
 - HTTP target and representation checks happen before model-turn body admission.
+- Declared representation trailer keys are preflight metadata; malformed undeclared late metadata is
+  neither merged nor reclassified after provider work.
 - ICGT-009 remains the only request-byte, strict-JSON, semantic-admission, and dispatch owner.
 - A closed outcome lets HTTP presentation remain exhaustive without parsing failure bodies.
 - Provider code, retryability, and usage cross unchanged; only fixed messages and statuses are added.
@@ -669,6 +1077,8 @@ sequence can prove those behaviors deterministically and a workload benefits fro
 - **Raw path spelling:** The encoded path form retained by a parsed HTTP request.
 - **Media type:** The declared format of a body, such as `application/json`.
 - **Content encoding:** A transformation such as gzip applied to representation bytes.
+- **Declared trailer:** A field name announced before the body whose value is supplied after the body;
+  Go exposes the declared key in `Request.Trailer` when the handler begins.
 - **Transport rejection:** A failure decided before model-turn body admission.
 - **Protocol failure:** A model-turn outcome carrying FastGate's versioned failure meaning.
 - **Presentation mapping:** Translation from a validated outcome to status, headers, and body.
