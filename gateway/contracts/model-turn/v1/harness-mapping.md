@@ -5,7 +5,7 @@
 ICGT-006 reviewed merged Code Assist Harness commit
 `ce76b4f9a3be5ea49f252616db0ced6ec4e8cdd7` (`Merge pull request #24 from
 jimmie-potts/codex/implement-cah-023`). That commit is evidence for this mapping, not an immutable or
-jointly published handoff. ICGT-020 owns an adapter-ready snapshot; a later harness story owns a
+jointly published handoff. ICGT-021 owns an adapter-ready snapshot; a later harness story owns a
 separate `FastGateProvider` and pins the packaged contract.
 
 The reviewed harness sources are:
@@ -48,7 +48,7 @@ neither reused nor weakened by this contract.
 | `instructions[].content` | `RepositoryInstruction.content`, non-empty text without a domain maximum | Lossy | FastGate accepts at most 32 generic instruction blocks and 65,536 code points per content value. The adapter must reject overflow before dispatch, never truncate or reorder it. |
 | Empty `required_capabilities` | Current `ProviderRequest` has no tool declaration | Exact | The current harness profile always sends an empty array. |
 | `required_capabilities = ["tool_calls"]` | Current request cannot declare tool schemas | Explicitly unsupported | The shape is valid for generic clients. ICGT-009 owns the v1 rejection decision/envelope and proves the fake was not called; ICGT-010 repeats the ordering proof at the HTTP boundary. A future capability/tool story owns support. |
-| Authentication | Not a provider-request field; CAH-023 reads its provider key only after explicit adapter selection | Deferred | ICGT-010's first fake endpoint refuses inference-route startup on a non-loopback listener and remains unauthenticated. ICGT-020 records that explicit loopback/no-auth profile. A separate later FastGate story and profile implement authentication/TLS before non-loopback use, while the future harness adapter owns its trusted endpoint and credential configuration outside the body. |
+| Authentication | Not a provider-request field; CAH-023 reads its provider key only after explicit adapter selection | Deferred | ICGT-010 plans HTTP presentation without mounting a route. ICGT-011 owns actual-listener loopback enforcement and the first runtime composition, which remains unauthenticated. ICGT-021 records that explicit loopback/no-auth profile. A separate later FastGate story and profile implement authentication/TLS before non-loopback use, while the future harness adapter owns its trusted endpoint and credential configuration outside the body. |
 
 FastGate bounds are public admission rules, not CAH workflow quotas. CAH's model-turn count,
 provider-work deadline, assistant UTF-8 byte budget, and observed-tool limit remain harness-owned and
@@ -59,13 +59,13 @@ must not be copied into this request as platform quota fields.
 | FastGate v1 meaning | Current harness meaning | Classification | Mapping rule |
 | --- | --- | --- | --- |
 | `output_text` | Ordered terminal-safe `ProviderTextDelta` values followed by one matching `ProviderTextCompleted` | Lossy for accepted characters and timing | FastGate accepts generic non-empty text, while CAH accepts TAB/LF but rejects every other C0/C1 control. For admissible text, a non-streaming adapter can preserve the value as one delta plus matching completion. For disallowed text it must reject the whole response locally as a fixed safe `invalid_response`, without sanitizing, truncating, emitting, or logging the value. Provider timing and chunks are also unavailable until streaming. |
-| Text observed before a failed terminal | `ProviderTextDelta` and possibly `ProviderTextCompleted` may precede `ProviderFailed` | Deferred | The non-streaming failed result carries no observed text, so an adapter must not invent a legal text sequence. `model-turn-stream/v1`, owned by ICGT-011, must preserve the observation order before a failed terminal. |
+| Text observed before a failed terminal | `ProviderTextDelta` and possibly `ProviderTextCompleted` may precede `ProviderFailed` | Deferred | The non-streaming failed result carries no observed text, so an adapter must not invent a legal text sequence. `model-turn-stream/v1`, owned by ICGT-012, must preserve the observation order before a failed terminal. |
 | Non-empty output | A successful harness turn requires at least one non-empty delta; empty completed text cannot authorize success | Exact | FastGate v1 rejects an empty completed result. |
 | Output maximum | CAH accepts at most its configured UTF-8 byte budget, never above the fixed 8,192-byte compatibility ceiling | Lossy | FastGate permits 65,536 code points for other clients. A future CAH adapter/session may reject a larger valid FastGate result under its own safety policy; it must not truncate it into success. |
 | Provider-emitted tool request (`call_id`, `name`, and serialized arguments) | `ProviderToolCallRequested` preserves all three values for the harness loop | Explicitly unsupported | Non-streaming v1 has no successful tool-call representation. A later runtime must map unsolicited upstream tool output to `unsupported_upstream_output` without returning the arguments. Supporting tools requires a separately reviewed, versioned tool extension and owning story. |
 | Completed-result `usage.input_tokens` and `usage.output_tokens` | `ProviderUsageReported`, each a non-negative JavaScript-safe integer, after matching completed text | Exact | Preserve both counters as non-authoritative evidence before emitting the harness completion. Absence stays absence. |
-| Failed-result usage with no observed text | CAH rejects `ProviderUsageReported` unless non-empty deltas and matching `ProviderTextCompleted` came first | Lossy and currently unrepresentable | FastGate preserves the counters for other clients, but the current harness cannot consume them. A future adapter must not invent text or silently claim exactness. ICGT-020 may publish omission only as an explicitly lossy mapping; exactness requires a later CAH contract change. |
-| Failure-side usage after observed text | CAH can accept usage after non-empty deltas and matching `ProviderTextCompleted`, before `ProviderFailed` | Deferred | `model-turn-stream/v1` and ICGT-011 must preserve the text-first observation order. Only that representable sequence can become exact without changing the harness. |
+| Failed-result usage with no observed text | CAH rejects `ProviderUsageReported` unless non-empty deltas and matching `ProviderTextCompleted` came first | Lossy and currently unrepresentable | FastGate preserves the counters for other clients, but the current harness cannot consume them. A future adapter must not invent text or silently claim exactness. ICGT-021 may publish omission only as an explicitly lossy mapping; exactness requires a later CAH contract change. |
+| Failure-side usage after observed text | CAH can accept usage after non-empty deltas and matching `ProviderTextCompleted`, before `ProviderFailed` | Deferred | `model-turn-stream/v1` and ICGT-012 must preserve the text-first observation order. Only that representable sequence can become exact without changing the harness. |
 | `model_turn.completed` | `ProviderCompleted` after reconciled text and optional usage | Exact for non-streaming outcome | A future adapter emits one provider-neutral completion after mapping the result. Runtime and cleanup proof are not supplied by schema validation. |
 | Shared failure code | `authentication_failed`, `rate_limited`, `request_rejected`, `unavailable`, or `invalid_response` | Exact where names match | Preserve the shared category, bounded message, and retryability. |
 | `invalid_request` or `unsupported_capability` | No matching `ProviderFailureCode` | Lossy | A future adapter maps these safe pre-dispatch failures to `request_rejected` unless a reviewed harness change adds a distinct neutral category. |
@@ -86,17 +86,17 @@ dispatch from `unsupported_upstream_output` after dispatch, without returning ra
 
 | Harness semantic | Classification | v1 treatment |
 | --- | --- | --- |
-| Exactly one completed or failed terminal | Exact for one non-streaming response | The completed and failed schemas are disjoint by `kind`; endpoint status/framing remains a later transport decision. |
-| `Provider.start()` creates a lazy operation; network work begins only when events are consumed | Deferred | A future CAH adapter owns lazy local construction. ICGT-010's server endpoint does not by itself prove this client-side rule; ICGT-020 freezes it for the handoff. |
-| `events()` is single-consumer and raises on a second claim | Deferred | The future CAH adapter owns the local single-claim guard. ICGT-011 defines FastGate stream grammar, while ICGT-020 freezes the cross-repository behavior. |
-| A text-completed observation is not itself terminal | Exact for a successful non-streaming result; deferred before failure | A future adapter may synthesize the successful text observation before `ProviderCompleted`. Failure-side text completion requires `model-turn-stream/v1` under ICGT-011. |
-| Partial deltas followed by failure | Deferred | The non-streaming failure body carries no partial output. ICGT-011 owns the stream grammar and ICGT-013 owns the first streamed endpoint behavior, including what admitted partial output remains visible. |
-| Cancellation is control flow, not provider failure | Deferred | ICGT-014 owns transport cancellation intent, acknowledgement, races, and correlation. No cancellation document appears in this corpus. |
-| No later event after terminal or accepted local cancellation | Deferred | A single parsed body has no later event, but runtime behavior is unproved. ICGT-011 owns terminal stream grammar; ICGT-014 owns the cancellation case. |
-| `cancel()` is idempotent, closes the iterator, and distinguishes `cancelled` from `already_closed` | Deferred | The future CAH adapter preserves the two local outcomes. ICGT-014 owns FastGate cancellation intent, acknowledgement, and races; ICGT-020 freezes their mapping. Neither outcome is a provider failure. |
-| `wait_closed()` is repeatable local cleanup confirmation | Deferred | Non-streaming schemas contain no cleanup evidence. ICGT-014 owns cancellation closure, while ICGT-015 owns deadline, cleanup grace, and bounded FastGate-local upstream reaping. |
-| `force_cancel_cleanup()` is idempotent forced local task reaping | Deferred | The future CAH adapter owns this escape hatch for its local HTTP, stream, and task resources. ICGT-015 separately owns FastGate's server-side grace and bounded local upstream reaping, and ICGT-020 freezes both layers. Returning confirms only local adapter-owned closure, never remote provider termination. |
-| Confirmed versus unconfirmed upstream cleanup | Deferred | Local socket/body/stream cleanup must never be described as proof that provider computation or billing stopped. ICGT-018 owns the first live-provider evidence; ICGT-020 owns the later harness handoff distinction. |
+| Exactly one completed or failed terminal | Exact for one non-streaming response | The completed and failed schemas are disjoint by `kind`; ICGT-010 plans status/framing, but runtime evidence does not exist yet. |
+| `Provider.start()` creates a lazy operation; network work begins only when events are consumed | Deferred | A future CAH adapter owns lazy local construction. Neither ICGT-010's handler presentation nor ICGT-011's later runtime binding proves this client-side rule; ICGT-021 freezes it for the handoff. |
+| `events()` is single-consumer and raises on a second claim | Deferred | The future CAH adapter owns the local single-claim guard. ICGT-012 defines FastGate stream grammar, while ICGT-021 freezes the cross-repository behavior. |
+| A text-completed observation is not itself terminal | Exact for a successful non-streaming result; deferred before failure | A future adapter may synthesize the successful text observation before `ProviderCompleted`. Failure-side text completion requires `model-turn-stream/v1` under ICGT-012. |
+| Partial deltas followed by failure | Deferred | The non-streaming failure body carries no partial output. ICGT-012 owns the stream grammar and ICGT-014 owns the first streamed endpoint behavior, including what admitted partial output remains visible. |
+| Cancellation is control flow, not provider failure | Deferred | ICGT-015 owns transport cancellation intent, acknowledgement, races, and correlation. No cancellation document appears in this corpus. |
+| No later event after terminal or accepted local cancellation | Deferred | A single parsed body has no later event, but runtime behavior is unproved. ICGT-012 owns terminal stream grammar; ICGT-015 owns the cancellation case. |
+| `cancel()` is idempotent, closes the iterator, and distinguishes `cancelled` from `already_closed` | Deferred | The future CAH adapter preserves the two local outcomes. ICGT-015 owns FastGate cancellation intent, acknowledgement, and races; ICGT-021 freezes their mapping. Neither outcome is a provider failure. |
+| `wait_closed()` is repeatable local cleanup confirmation | Deferred | Non-streaming schemas contain no cleanup evidence. ICGT-015 owns cancellation closure, while ICGT-016 owns deadline, cleanup grace, and bounded FastGate-local upstream reaping. |
+| `force_cancel_cleanup()` is idempotent forced local task reaping | Deferred | The future CAH adapter owns this escape hatch for its local HTTP, stream, and task resources. ICGT-016 separately owns FastGate's server-side grace and bounded local upstream reaping, and ICGT-021 freezes both layers. Returning confirms only local adapter-owned closure, never remote provider termination. |
+| Confirmed versus unconfirmed upstream cleanup | Deferred | Local socket/body/stream cleanup must never be described as proof that provider computation or billing stopped. ICGT-019 owns the first live-provider evidence; ICGT-021 owns the later harness handoff distinction. |
 
 ## Direct OpenAI adapter separation
 
@@ -116,10 +116,10 @@ connection cleanup does not prove upstream cancellation.
 The v1 schema can represent the current harness's bounded ordered text request, map its ordered
 repository guidance into generic instruction blocks, and preserve successful completed text and
 usage plus safe normalized outcomes through a future adapter. FastGate also preserves optional
-failure-side usage for other clients. Text-first streamed failures may become representable under ICGT-011;
+failure-side usage for other clients. Text-first streamed failures may become representable under ICGT-012;
 no-text failure usage remains unrepresentable in the current harness and requires an explicit
-ICGT-020 handoff decision or later CAH contract change. The rows above also record bound narrowing,
+ICGT-021 handoff decision or later CAH contract change. The rows above also record bound narrowing,
 error-category collapse, unsupported tool capability, and deferred cancellation/cleanup behavior.
-ICGT-020 freezes the candidate source/profile, ICGT-021 packages and validates it with a digest, and
+ICGT-021 freezes the candidate source/profile, ICGT-022 packages and validates it with a digest, and
 a later harness-owned adapter story pins and tests that package. Until all three stages complete,
 this document is reviewed design evidence rather than a joint runtime conformance claim.

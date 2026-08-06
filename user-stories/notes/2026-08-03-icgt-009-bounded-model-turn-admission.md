@@ -124,13 +124,19 @@ The reviewer should be able to explain this invariant: no rejected body can star
 every admitted body starts exactly one provider-neutral invocation whose returned alternative is
 either preserved as valid or replaced by fixed safe state.
 
-## ICGT-010 handoff
+## Original combined ICGT-010 handoff
 
-ICGT-010 may bind this executor to one loopback-only HTTP route and map each closed outcome to status,
-media type, and response bytes. Before implementation, it still needs a reviewed story and lesson
-that lock method/media-type behavior, request-body closure, loopback startup enforcement, complete
-provider-outcome mapping, and concurrency policy for the single-owner deterministic fake.
+At ICGT-009 completion, the next outcome combined binding this executor to one loopback-only HTTP
+route with mapping each closed outcome to status, media type, and response bytes. It still needed a
+reviewed story and lesson to lock method/media behavior, request-body ownership, loopback startup,
+complete provider-outcome mapping, and concurrency policy for the single-owner deterministic fake.
 
-ICGT-010 must not weaken strict admission, recover IDs from rejected prefixes, reinterpret provider
-retryability or usage, add an ambient proxy or redirect path, or expose the first unauthenticated route
-on a non-loopback listener.
+On 2026-08-06, readiness review split that combined handoff. ICGT-010 now owns the injectable HTTP
+handler, exact transport preflight, complete outcome presentation, and serial real-loopback test
+evidence. ICGT-011 owns mounting the route, actual-listener loopback enforcement, runtime-provider
+selection, and bounded concurrency. This preserves the strict fake as a test oracle instead of
+silently treating it as a concurrency-safe interactive provider.
+
+Neither story may weaken strict admission, recover IDs from rejected prefixes, reinterpret provider
+retryability or usage, add an ambient proxy or redirect path, or expose an unauthenticated route on a
+non-loopback listener.

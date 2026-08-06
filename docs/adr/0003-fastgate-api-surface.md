@@ -78,9 +78,16 @@ and reviewed story or ADR.
 ICGT-006 materializes the exact v1 fields, bounds, normalized-error meanings, strict JSON parse
 profile, unknown-field policy, base/extension versioning mechanics, mapping, fixtures, and offline
 artifact validation. Bounded transport/body admission and provider-neutral execution belong to
-ICGT-009; endpoint path, binding, and complete provider-outcome mapping belong to ICGT-010. The accepted
-direction and committed schema still do not claim that an endpoint, streaming implementation,
-cancellation behavior, or runtime conformance exists.
+ICGT-009. ICGT-010 owns the exact HTTP request target and complete provider-outcome presentation;
+ICGT-011 separately owns service mounting, actual-listener loopback enforcement, runtime-provider
+selection, and bounded concurrency. The accepted direction and committed schema still do not claim
+that an endpoint, streaming implementation, cancellation behavior, or runtime conformance exists.
+
+This implementation sequencing was clarified on 2026-08-06 after ICGT-009 exposed a concurrency
+boundary: the strict deterministic fake is a finite, single-owner test oracle, while a normal Go HTTP
+server may invoke a handler concurrently. Keeping presentation in ICGT-010 and runtime composition in
+ICGT-011 preserves Option C while preventing a planned test fake from being mistaken for a safe
+long-lived service dependency.
 
 ## Rationale
 
@@ -124,7 +131,7 @@ public inference endpoint or provider-domain contract depends on it:
    or that local closure proves remote termination.
 4. Assign client-declared unsupported-capability rejection to the pre-dispatch admission story before
    paid work, with deterministic no-dispatch evidence, while unsolicited unsupported upstream output
-   becomes an honest bounded post-dispatch failure in the endpoint story.
+   becomes an honest bounded post-dispatch failure in the HTTP-presentation story.
 5. Keep provider/model routing gateway-owned without leaking vendor fields into the harness request
    contract.
 6. State the exact FastGate protocol compatibility claim that schema validation and contract tests
@@ -149,10 +156,10 @@ cannot represent, from text-first failure usage that the later stream profile ma
   semantically irrelevant ordering; they are internal review guards, not release-package digests.
 - Later SSE, cancellation, and cleanup stories extend the fixture corpus only after they can prove
   those behaviors.
-- ICGT-020 pins an adapter-ready harness contract snapshot and turns implemented FastGate behavior,
+- ICGT-021 pins an adapter-ready harness contract snapshot and turns implemented FastGate behavior,
   transport policy, and exact schema/fixture source artifacts into a candidate cross-repository
   handoff profile.
-- ICGT-021 packages and validates those frozen artifacts, records a byte-level release
+- ICGT-022 packages and validates those frozen artifacts, records a byte-level release
   manifest/digest, and cannot change semantics without a new contract version.
 - A later Code Assist Harness story owns `FastGateProvider`, accepts the client side of the profile,
   pins that manifest/digest, and runs harness-side conformance tests before the handoff is jointly
@@ -171,5 +178,5 @@ OpenAI-compatible clients cannot treat FastGate as a base-URL replacement unless
 implemented and tested.
 
 This decision does not set model output length or provider inference speed. The custom JSON and
-stream framing may add or remove small amounts of translation and transport overhead; ICGT-019 will
+stream framing may add or remove small amounts of translation and transport overhead; ICGT-020 will
 measure gateway overhead rather than inferring it from the protocol name.

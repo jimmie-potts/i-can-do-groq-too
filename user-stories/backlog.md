@@ -16,8 +16,11 @@ implementation. The detailed dependency-ready sequence lives in [README.md](READ
 - FastGate-owned provider contracts.
 - Basic deterministic fake upstream, followed later by streaming/cancellation controls.
 - Completed bounded pre-dispatch model-turn admission includes schema-valid `tool_calls` rejection
-  with deterministic zero-dispatch evidence. The next outcome is one loopback-only fake-backed
-  endpoint that exhaustively maps completed and failed provider outcomes.
+  with deterministic zero-dispatch evidence.
+- A reviewed HTTP-presentation unit exhaustively maps completed and failed provider outcomes without
+  mounting the strict fake in the executable.
+- A later service-binding unit owns actual loopback enforcement, runtime-provider selection, and
+  bounded concurrency before the inference route becomes client-reachable.
 
 ## M2 - FastGate streaming reliability
 
@@ -36,7 +39,7 @@ implementation. The detailed dependency-ready sequence lives in [README.md](READ
   than depending on Code Assist Harness.
 - Versioned harness-to-FastGate handoff pinned to an adapter-ready harness contract snapshot.
 - FastGate-owned schema, fixtures, conformance artifacts, and client integration guidance.
-- ICGT-021 packaging that preserves ICGT-020's frozen artifacts and records a manifest/digest;
+- ICGT-022 packaging that preserves ICGT-021's frozen artifacts and records a manifest/digest;
   semantic changes require a new version and handoff review.
 - A separate Code Assist Harness-owned FastGate adapter; do not reuse the direct OpenAI adapter or
   `OPENAI_BASE_URL`.

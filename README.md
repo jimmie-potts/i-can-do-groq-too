@@ -25,8 +25,9 @@ capabilities and aliases before dispatch, and validates exactly one admitted pro
 
 No inference request endpoint or live provider adapter, database, Kubernetes controller, or
 simulator has been implemented yet. The admission executor and fake are internal seams, not a
-client-reachable inference service. ICGT-010 remains an outcome slice until its loopback-only HTTP
-contract, concurrency policy, and review checkpoints are promoted into a reviewed story and lesson.
+client-reachable inference service. ICGT-010 is now a reviewed planned story for the injectable HTTP
+presentation boundary. ICGT-011 still owns safe loopback service binding, runtime-provider selection,
+and concurrency before the executable can expose an inference route.
 
 ## What we are building
 

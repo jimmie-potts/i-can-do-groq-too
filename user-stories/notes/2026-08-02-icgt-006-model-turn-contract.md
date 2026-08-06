@@ -6,6 +6,10 @@
 - **Lesson:** [Defining FastGate model-turn v1](../../docs/lessons/icgt-006-selecting-client-protocol.md)
 - **Visual:** Not required; the Markdown lesson is the learning artifact
 
+> **Sequencing clarification (2026-08-06):** Future story IDs in this historical note use the current
+> sequence after HTTP presentation became ICGT-010, runtime binding became ICGT-011, and the former
+> ICGT-011 through ICGT-022 outcome slices shifted to ICGT-012 through ICGT-023.
+
 ## Observation
 
 ICGT-006 began after the FastGate lifecycle but before any inference endpoint or provider-domain
@@ -39,12 +43,13 @@ schema, admission, provider transport, and normalized outcomes.
   already-dispatched upstream produced a semantic result v1 cannot represent.
 - The required failure `request_id` envelope begins only after FastGate can recover a valid client
   identifier. ICGT-009 owns a separate bounded transport rejection when no safe ID can be recovered.
-- Caller authentication is not implemented by ICGT-009 or ICGT-010; the envelope's
+- Caller authentication is not implemented by ICGT-009 and remains deferred through ICGT-010 and
+  ICGT-011; the envelope's
   `authentication_failed` code refers only to FastGate authenticating to its selected upstream.
 - Caller authentication remains outside the body. `Authorization: Bearer <credential>` is a
   non-normative placeholder, not an implemented header contract.
 - Base versions use `model-turn/vN`; independently versioned extensions use
-  `model-turn-<name>/vN`, their own schema IDs, manifests, and fixtures. ICGT-011 owns
+  `model-turn-<name>/vN`, their own schema IDs, manifests, and fixtures. ICGT-012 owns
   `model-turn-stream/v1`; later cancellation and cleanup stories own separate behavior profiles.
 - ICGT-009 owns the raw HTTP-body byte cap. The per-field schema bounds and the offline checker's
   size, nesting, and exact-number implementation guards do not silently select transport limits.
@@ -91,8 +96,8 @@ and a separate raw-body-limit handoff.
 A deeper harness-grammar review showed that failure-side usage is not one uniformly deferred case.
 The current harness accepts usage before failure only after text deltas and matching completed text,
 while a non-streaming FastGate failure may carry usage with no observed text. The mapping classifies
-that no-text case as lossy and currently unrepresentable; ICGT-020 may publish omission only as
-explicitly lossy, while exactness requires a later CAH contract change. Only a failure after real observed text is deferred to ICGT-011's
+that no-text case as lossy and currently unrepresentable; ICGT-021 may publish omission only as
+explicitly lossy, while exactness requires a later CAH contract change. Only a failure after real observed text is deferred to ICGT-012's
 `model-turn-stream/v1`. An adapter must not drop evidence silently or invent text.
 
 The first numeric implementation used Python binary floats. A fractional count near the safe

@@ -24,21 +24,25 @@ The initial implementation sequence is intentionally smaller than “build a gat
 5. implement a basic non-streaming deterministic fake upstream—completed by ICGT-008;
 6. implement bounded body/semantic admission and one injected provider-neutral execution, tested
    with the deterministic fake and without HTTP binding—completed by ICGT-009;
-7. bind a loopback-only endpoint, reject wrong method/media type before dispatch, and map every
-   completed or failed provider outcome;
-8. define the FastGate-owned model-turn SSE grammar, then extend the fake with deterministic stream
+7. add an injectable HTTP handler that rejects invalid transport requests before dispatch and maps
+   every completed or failed provider outcome—planned by ICGT-010;
+8. mount that handler only after loopback-listener, runtime-provider, and bounded-concurrency policy
+   is reviewed—future ICGT-011;
+9. define the FastGate-owned model-turn SSE grammar, then extend the fake with deterministic stream
    gates and cancellation;
-9. stream fake output and propagate client cancellation;
-10. add deadlines, slow-client bounds, and low-cardinality metrics;
-11. add OpenAI as the first opt-in live upstream; and
-12. add Groq only after direct and gateway baselines can be compared.
+10. stream fake output and propagate client cancellation;
+11. add deadlines, slow-client bounds, and low-cardinality metrics;
+12. add OpenAI as the first opt-in live upstream; and
+13. add Groq only after direct and gateway baselines can be compared.
 
 Steps 1 through 6 are complete. The
 [ICGT-009 delivery contract](../user-stories/icgt-009-admit-and-execute-model-turn.md),
 [implementation](internal/modelturn), and
 [verified lesson](../docs/lessons/icgt-009-bounded-model-turn-admission.md) provide bounded admission,
-zero/one-dispatch, and provider-return evidence. Step 7 remains an outcome slice until its HTTP and
-fake-concurrency decisions are promoted into a reviewed story and lesson.
+zero/one-dispatch, and provider-return evidence. Step 7 now has a reviewed planned
+[ICGT-010 delivery contract](../user-stories/icgt-010-present-model-turn-over-http.md) and
+[Markdown lesson](../docs/lessons/icgt-010-model-turn-http-presentation.md), but no handler code exists
+yet. Step 8 remains an outcome slice; the executable stays health-only through ICGT-010.
 
 The provider-neutral seam lives in [`internal/provider`](internal/provider). It carries only ordered
 conversation, generic instructions, required capabilities, completed text, optional usage, and
@@ -108,7 +112,7 @@ The first handoff is loopback-only, unauthenticated, and no-tool. A versioned Fa
 plus a compatible CAH contract is required before full coding-agent parity; a separately implemented
 authentication/TLS profile is required before non-loopback use.
 
-ICGT-019's earlier infrastructure comparison uses a small repository-owned measurement client for
+ICGT-020's earlier infrastructure comparison uses a small repository-owned measurement client for
 the same bounded direct-provider and gateway workload. It does not use Code Assist Harness or claim
 coding-task correctness parity.
 
@@ -137,11 +141,11 @@ defines:
 A later non-loopback profile may add authentication, TLS, redirect, and explicit proxy policy only
 after FastGate implements and conformance-tests those behaviors.
 
-ICGT-021 packages and validates the exact handoff artifacts, records a manifest/digest, and does not
+ICGT-022 packages and validates the exact handoff artifacts, records a manifest/digest, and does not
 change semantics. Upstream cleanup is “confirmed” only after an explicit provider terminal
 acknowledgement correlated to the attempt; a returned context or closed local connection/body is
-still unconfirmed. No current v1 runtime records that certainty: ICGT-017 must define any bounded
-metric, ICGT-018 gathers the first live evidence, and ICGT-020 freezes the handoff meaning.
+still unconfirmed. No current v1 runtime records that certainty: ICGT-018 must define any bounded
+metric, ICGT-019 gathers the first live evidence, and ICGT-021 freezes the handoff meaning.
 
 ## Learning focus
 

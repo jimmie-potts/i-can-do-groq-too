@@ -116,9 +116,10 @@ safe retry, replay, or reuse of a billable result.
 The body has no credential field. Caller authentication is an out-of-body transport concern reserved
 for a later non-loopback authentication profile and implementation story. The non-normative
 placeholder is `Authorization: Bearer <credential>`; it shows where authentication belongs without
-selecting a token format or implemented header contract. ICGT-010's first endpoint remains
-loopback-only, must refuse inference-route startup on a non-loopback listener, and cannot claim
-authenticated operation.
+selecting a token format or implemented header contract. The planned ICGT-010 handler defines HTTP
+presentation but does not mount a route. ICGT-011 later owns inference-route startup, actual-listener
+loopback enforcement, runtime-provider selection, and concurrency; it cannot claim authenticated
+operation.
 
 ### Capability admission
 
@@ -196,11 +197,15 @@ dispatch. Invalid errors are not formatted, unwrapped through `errors.Is`/`error
 exposed; invalid result content is not exposed; and the fixed outcome has no usage. Runtime tests
 cover raw, wrapped, non-comparable, and typed-nil errors plus invalid and mixed results.
 
-ICGT-010 owns HTTP status mapping for every admission and provider outcome. For a provider-origin
-failure, it copies the provider-owned `code`, `retryable`, and optional usage observation unchanged;
-it does not reinterpret retryability. Admission owners author their fixed code, safe message,
-retryability, and usage absence. The schema validates the normalized envelope but does not prove
-that a future runtime chose the truthful code or flag.
+ICGT-010 owns HTTP presentation for every admission and provider outcome, including status mapping
+for every response-producing outcome and response abort for matching caller-context termination. For
+a provider-origin failure, it copies the provider-owned `code`, `retryable`, and optional usage
+observation unchanged; it does not reinterpret retryability. Admission owners author their fixed
+code, safe message, retryability, and usage absence. The schema validates the normalized envelope but
+does not prove that a future runtime chose the truthful code or flag. The reviewed planned
+[ICGT-010 story](../../../../user-stories/icgt-010-present-model-turn-over-http.md) locks the exact
+request target, transport-preflight precedence, statuses, media types, and fixed provider messages.
+No handler implementation or runtime binding exists yet.
 
 Provider exceptions, response bodies, headers, credentials, raw tool arguments, and unbounded text
 do not belong in this shape. Usage remains observation rather than billing proof or retry authority,
@@ -212,9 +217,9 @@ JSON parsing and the ID independently satisfies the v1 identifier rule. Malforme
 read-failed, duplicate-key, invalid-Unicode, non-object, missing-ID, or invalid-ID input receives the
 exact 16-byte ASCII response `invalid request\n`—the text `invalid request` followed by one line-feed
 byte; that response is not a `model_turn.failed` document.
-ICGT-010 later assigns its HTTP status and media type. Caller authentication is outside this envelope
-and remains unimplemented through ICGT-010; `authentication_failed` means upstream authentication
-only. The first ICGT-020/021 handoff remains loopback-only and unauthenticated. A separate FastGate
+ICGT-010 will assign its HTTP status and media type. Caller authentication is outside this envelope
+and remains unimplemented through ICGT-011; `authentication_failed` means upstream authentication
+only. The first ICGT-021/022 handoff remains loopback-only and unauthenticated. A separate FastGate
 authentication/TLS implementation and reviewed profile must precede non-loopback use.
 
 ## Versioning rule
@@ -231,8 +236,8 @@ extension uses its own `gateway/contracts/model-turn-<name>/vN/` directory, sche
 case manifest, and fixtures. A semantic or fixture-expectation change within either a base contract
 or an extension requires that contract's next version.
 
-ICGT-011 owns materializing `gateway/contracts/model-turn-stream/v1/`; ICGT-014 owns a separately
-versioned cancellation behavior profile; and ICGT-015 owns a separately versioned cleanup/deadline
+ICGT-012 owns materializing `gateway/contracts/model-turn-stream/v1/`; ICGT-015 owns a separately
+versioned cancellation behavior profile; and ICGT-016 owns a separately versioned cleanup/deadline
 profile. Those stories add their fixtures only when the corresponding behavior is executable. Tool
 calls remain explicitly unsupported until a separately reviewed tool story names and versions its
 own extension.
