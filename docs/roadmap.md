@@ -1,8 +1,8 @@
 # Roadmap
 
-**Status:** Planned outcomes. M0 and ICGT-004 through ICGT-009 are implemented. ICGT-010 is the next
-implementation-ready unit; HTTP presentation, service binding, and runtime concurrency remain
-unimplemented.
+**Status:** Planned outcomes. M0 and ICGT-004 through ICGT-010 are implemented. ICGT-011 is the next
+outcome slice; service mounting, actual-listener enforcement, runtime-provider selection, and bounded
+concurrency remain unimplemented.
 
 ## Delivery principles
 
@@ -38,16 +38,15 @@ Reviewed M1 unit sequence:
 - ICGT-008 (Done) implements the basic non-streaming deterministic fake upstream; and
 - ICGT-009 (Done) implements bounded strict admission and exactly one injected provider-neutral
   invocation, with deterministic-fake evidence and no HTTP binding; and
-- ICGT-010 (Planned) defines one injectable model-turn HTTP handler, exhaustive outcome
-  presentation, transport preflight, and real-loopback integration evidence without mounting the
-  handler in the executable.
+- ICGT-010 (Done) implements one injectable model-turn HTTP handler, exhaustive outcome presentation,
+  transport preflight, context-termination abort behavior, and real-loopback integration evidence
+  without mounting the handler in the executable.
 
 The remaining units keep service binding, stream grammar, and deterministic concurrency/cancellation
 behavior separate so each review has one primary concept. ICGT-010 owns HTTP presentation and proves
 that wrong target, method, encoding, or media type causes zero provider calls. ICGT-011 later owns
 mounting the route, rejecting a non-loopback actual listener, selecting a safe runtime provider or
-demo policy, and bounding concurrent work. The default command remains health-only through
-ICGT-010.
+demo policy, and bounding concurrent work. The default command remains health-only after ICGT-010.
 
 ### M2 - Streaming reliability
 
@@ -139,9 +138,9 @@ statements are complementary, not competing sequences.
 
 ## Detailed-planning boundary
 
-The detailed, linked story list now ends at the planned ICGT-010 HTTP-presentation unit. ICGT-011
-remains an outcome slice until its actual-listener, runtime-provider, and bounded-concurrency
-decisions are promoted into a reviewed story and lesson. Later rows in
+The detailed, linked story list now ends at the delivered ICGT-010 HTTP-presentation unit. ICGT-011
+remains an outcome slice until its service-mounting, actual-listener, runtime-provider, and
+bounded-concurrency decisions are promoted into a reviewed story and lesson. Later rows in
 [the backlog](../user-stories/backlog.md) are outcome slices, not promises that their contracts are
 ready. Before promoting one, create its story and lesson, lock dependencies and exclusions, and name
 the exact human review checkpoint.

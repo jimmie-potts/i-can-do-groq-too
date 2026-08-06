@@ -257,10 +257,21 @@ mutex.
   that the server never buffered, drained, or closed request bytes?
 - Does an exact origin-form target check include raw `RequestURI` and reject absolute, authority,
   opaque, encoded, query, and trailing-slash alternatives without confusing that with Host policy?
+- Do reciprocal mutations prove both the raw `RequestURI` check and the parsed `URL` check matter,
+  instead of changing both representations in every negative example?
 - If `mime.ParseMediaType` is used for a narrow lexical profile, can duplicate-identical or RFC 2231
   parameters normalize into a shape the design intended to reject?
+- Does preflight inspect case-insensitive declared trailer keys whose nil values are visible before
+  body reads? If invalid undeclared late trailers cannot be rejected before work, is that boundary
+  explicit instead of pretending a post-execution rejection was zero-work?
 - Does a HEAD test distinguish the handler's authored body from the server's required suppression of
   wire body bytes?
+- Do direct response assertions inspect the recorder's committed header snapshot rather than its
+  mutable live header map, so headers added after `WriteHeader` cannot satisfy the test?
+- Does a real-server abort test prove the handler/invoker was reached and the client context did not
+  merely time out, while a direct test separately pins the exact abort sentinel and zero writes?
+- If JSON serialization failure is structurally unreachable with current typed documents, is its
+  fallback tested through a pure preparation seam rather than a mutable production hook?
 
 Why: standard-library transport behavior can add, suppress, drain, or normalize data outside the
 obvious handler calls. Direct-handler evidence and real-server evidence prove different ownership
@@ -363,6 +374,24 @@ put progress between two 99-stall runs, and prove a differently typed non-compar
 rejected without panic or formatting. The public executor repeats the relevant guarantees with
 zero/one-dispatch evidence.
 
+## Evidence added during ICGT-010
+
+The ICGT-010 adversarial review found four reusable HTTP evidence gaps: declared representation
+trailers were outside preflight, raw and parsed target checks were not independently mutation-locked,
+direct tests inspected a live response-header map rather than the committed snapshot, and a
+real-server abort test could have passed by waiting for its own timeout. The fixes and regression
+evidence live in:
+
+- [transport admission and committed-header tests](../gateway/internal/modelturnhttp/handler_test.go);
+- [abort, declared-trailer, write-failure, HEAD, and loopback tests](../gateway/internal/modelturnhttp/server_test.go);
+- [the HTTP handler](../gateway/internal/modelturnhttp/handler.go); and
+- [the ICGT-010 learning companion](lessons/icgt-010-model-turn-http-presentation.md).
+
+The final design rejects predeclared `Content-Type` and `Content-Encoding` trailer names before body
+admission while keeping valid chunked requests. It deliberately does not convert invalid undeclared
+late content-format trailers into a post-provider `415`, because that would misstate a response after
+work as a zero-work transport rejection.
+
 ## Evidence added during ICGT-010 readiness
 
 The ICGT-010 readiness review found that the planned HTTP endpoint mixed presentation with runtime
@@ -379,6 +408,6 @@ evidence explicitly:
 - future ICGT-011, which owns service binding, runtime-provider selection, actual-listener loopback
   enforcement, and bounded concurrency.
 
-The planned [ICGT-010 lesson](lessons/icgt-010-model-turn-http-presentation.md) makes the distinction
+The [ICGT-010 lesson](lessons/icgt-010-model-turn-http-presentation.md) makes the distinction
 between a real loopback handler test and a client-reachable runtime service part of the personal
 review map.

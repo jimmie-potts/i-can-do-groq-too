@@ -5,6 +5,10 @@ future clients may pin independently of provider-domain or transport code. They 
 HTTP endpoint, authenticate a caller, select a provider, perform inference, stream output, cancel
 work, or prove cleanup behavior.
 
+ICGT-010 separately implements and tests an injectable HTTP presentation handler for these shapes.
+The default service does not mount it; ICGT-011 owns runtime binding, actual-listener enforcement,
+provider selection, and bounded concurrency.
+
 ## Contract files
 
 - `schema/request.schema.json` validates one non-streaming model-turn request.
@@ -116,7 +120,7 @@ safe retry, replay, or reuse of a billable result.
 The body has no credential field. Caller authentication is an out-of-body transport concern reserved
 for a later non-loopback authentication profile and implementation story. The non-normative
 placeholder is `Authorization: Bearer <credential>`; it shows where authentication belongs without
-selecting a token format or implemented header contract. The planned ICGT-010 handler defines HTTP
+selecting a token format or implemented header contract. The implemented ICGT-010 handler defines HTTP
 presentation but does not mount a route. ICGT-011 later owns inference-route startup, actual-listener
 loopback enforcement, runtime-provider selection, and concurrency; it cannot claim authenticated
 operation.
@@ -129,7 +133,7 @@ rejects that declared requirement **before alias selection and provider dispatch
 with `unsupported_capability`, the exact message
 `The required capability is not supported.`, `retryable: false`, and no usage. A request combining
 `tool_calls` with an unknown alias reports the capability failure. ICGT-009 proves the fake is not
-invoked; ICGT-010 repeats the integration test at the HTTP boundary and must observe zero provider
+invoked; ICGT-010 repeats the integration test at the HTTP boundary and observes zero provider
 calls.
 
 That is different from an upstream provider unexpectedly producing tool output after dispatch. A
@@ -165,8 +169,8 @@ A `model_turn.failed` document returns the same `request_id` and one strict erro
 It may also carry the same strict `usage` object as a completed result. This preserves bounded,
 non-authoritative token evidence when an upstream reports usage before a later failure. A
 pre-dispatch rejection normally has no usage because no provider work should have started.
-ICGT-007 must preserve optional failure-side usage in the provider-neutral failed outcome, and
-ICGT-010 later owns mapping that observation into this wire envelope.
+ICGT-007 preserves optional failure-side usage in the provider-neutral failed outcome, and ICGT-010
+maps that observation into this wire envelope.
 
 The error codes have these v1 meanings:
 
@@ -190,22 +194,22 @@ usage rather than blaming the client or exposing the validation detail. ICGT-009
 outcomes and verifies their exact bodies against the contract fixture.
 
 After its one invocation, ICGT-009 also validates the returned provider alternative with the
-provider-domain contract. A valid result, direct normalized failure, or matching caller-context
-termination remains unchanged for ICGT-010. An invalid result/error combination, raw or wrapped
+provider-domain contract. ICGT-010 preserves a valid result, direct normalized failure, or matching
+caller-context termination. An invalid result/error combination, raw or wrapped
 error, or fabricated context termination becomes the same correlated fixed `internal_error` after one
 dispatch. Invalid errors are not formatted, unwrapped through `errors.Is`/`errors.As`, retained, or
 exposed; invalid result content is not exposed; and the fixed outcome has no usage. Runtime tests
 cover raw, wrapped, non-comparable, and typed-nil errors plus invalid and mixed results.
 
-ICGT-010 owns HTTP presentation for every admission and provider outcome, including status mapping
+ICGT-010 implements HTTP presentation for every admission and provider outcome, including status mapping
 for every response-producing outcome and response abort for matching caller-context termination. For
 a provider-origin failure, it copies the provider-owned `code`, `retryable`, and optional usage
 observation unchanged; it does not reinterpret retryability. Admission owners author their fixed
-code, safe message, retryability, and usage absence. The schema validates the normalized envelope but
-does not prove that a future runtime chose the truthful code or flag. The reviewed planned
-[ICGT-010 story](../../../../user-stories/icgt-010-present-model-turn-over-http.md) locks the exact
-request target, transport-preflight precedence, statuses, media types, and fixed provider messages.
-No handler implementation or runtime binding exists yet.
+code, safe message, retryability, and usage absence. The schema alone does not prove that a runtime
+chose the truthful code or flag; the ICGT-010 handler tests supply that presentation evidence. The
+delivered [ICGT-010 story](../../../../user-stories/icgt-010-present-model-turn-over-http.md) locks the
+exact request target, transport-preflight precedence, statuses, media types, fixed provider messages,
+and matching-context response abort. The handler exists, but runtime binding remains unimplemented.
 
 Provider exceptions, response bodies, headers, credentials, raw tool arguments, and unbounded text
 do not belong in this shape. Usage remains observation rather than billing proof or retry authority,
@@ -217,7 +221,7 @@ JSON parsing and the ID independently satisfies the v1 identifier rule. Malforme
 read-failed, duplicate-key, invalid-Unicode, non-object, missing-ID, or invalid-ID input receives the
 exact 16-byte ASCII response `invalid request\n`—the text `invalid request` followed by one line-feed
 byte; that response is not a `model_turn.failed` document.
-ICGT-010 will assign its HTTP status and media type. Caller authentication is outside this envelope
+ICGT-010 assigns its HTTP status and media type. Caller authentication is outside this envelope
 and remains unimplemented through ICGT-011; `authentication_failed` means upstream authentication
 only. The first ICGT-021/022 handoff remains loopback-only and unauthenticated. A separate FastGate
 authentication/TLS implementation and reviewed profile must precede non-loopback use.

@@ -1,6 +1,6 @@
 # ICGT-010 - Present model-turn v1 over HTTP
 
-- **Status:** Planned
+- **Status:** Done
 - **Milestone:** M1 - FastGate non-streaming walking skeleton
 - **Dependencies:** ICGT-009
 - **Lesson:** [Model-turn HTTP presentation](../docs/lessons/icgt-010-model-turn-http-presentation.md)
@@ -28,8 +28,9 @@ concurrently. ICGT-010 therefore uses a fresh fake serially in tests and proves 
 exchange without mounting that fake in the runnable command. ICGT-011 separately owns service
 binding, runtime-provider selection, actual-listener loopback enforcement, and bounded concurrency.
 
-The expected production change is one handler/presenter package and roughly 220 through 320 changed
-production lines. Stop for split review if the implementation begins owning listener lifecycle,
+The implementation is one handler/presenter package with 321 production lines: one line above the
+review heuristic after adversarial review added declared-trailer protection. Splitting that transport
+check from its handler would make the boundary harder to review. Stop for split review if the implementation begins owning listener lifecycle,
 runtime-provider construction, concurrency control, authentication, or cancellation policy, or if it
 needs more than the one exported constructor locked below.
 
@@ -69,9 +70,11 @@ Checks occur in this order:
    rejects proxy-form request targets without selecting a Host-header policy.
 2. **Method:** require `POST`. Any other method receives status `405`, `Allow: POST`, and exact body
    `method not allowed\n`.
-3. **Content encoding:** reject any present `Content-Encoding` field, including an empty value or
-   `identity`, with status `415` and exact body `unsupported media type\n`.
-4. **Content type:** require exactly one `Content-Type` field. Before parsing, apply one small lexical
+3. **Content encoding:** reject any `Content-Encoding` field in the initial header section, including
+   an empty value or `identity`, and reject a `Content-Encoding` name declared in the request trailer
+   inventory. Both receive status `415` and exact body `unsupported media type\n`.
+4. **Content type:** require exactly one `Content-Type` field in the initial header section and reject
+   a `Content-Type` name declared in the request trailer inventory. Before parsing, apply one small lexical
    occurrence check: allow no semicolon, or exactly one semicolon followed by one parameter whose raw
    name, after optional whitespace is trimmed, is `charset` case-insensitively, without `*`,
    continuations, or another semicolon. Then parse with `mime.ParseMediaType` and accept only
@@ -87,6 +90,15 @@ For every target, method, encoding, or media-type rejection, the handler makes z
 mismatch wins over method or representation errors; method mismatch wins over representation errors;
 representation rejection wins over JSON admission. `Accept` negotiation, redirects, CORS, and
 alternate routes do not exist in this profile.
+
+[RFC 9110 section 6.5.1](https://www.rfc-editor.org/rfc/rfc9110#section-6.5.1) does not permit
+content-format fields to be generated as late trailers. Go exposes declared
+trailer names before the body is read, so the handler rejects those names during preflight. An
+undeclared forbidden trailer can appear to Go's HTTP/1 parser only after body EOF; it is invalid
+sender metadata and is never merged into or interpreted as representation metadata. The handler does
+not perform a late post-execution `415`, because provider work might already have happened and that
+response would violate the zero-work transport-rejection invariant. Valid chunked requests without
+forbidden trailer declarations remain accepted.
 
 ### Body ownership and bounds
 
@@ -220,7 +232,8 @@ the default service or uses the strict fake concurrently.
 
 ## Acceptance criteria
 
-1. Exact target, method, content-encoding, and content-type precedence is deterministic. Every
+1. Exact target, method, content-encoding, and content-type precedence is deterministic, including
+   declared representation-trailer names. Every
    transport rejection makes zero handler body-read calls, never calls the executor, and invokes the
    provider zero times; the test does not claim that `http.Server` never buffers or drains bytes.
 2. Constructor nil handling and every fixed transport response have exact bounded text, status,
@@ -264,7 +277,8 @@ Minimum focused evidence includes:
 - missing, repeated fields, malformed, duplicate-identical parameter, RFC 2231 extended/continued,
   unsupported, extra-parameter, wrong-charset, accepted bare JSON, and accepted sole UTF-8-charset
   media types;
-- any `Content-Encoding` field, including empty and `identity`;
+- initial and declared-trailer `Content-Encoding`, including empty and `identity`, plus a declared
+  trailer `Content-Type` and an accepted chunked request without forbidden trailer declarations;
 - recording bodies and empty fakes proving transport rejection reads and dispatches zero times;
 - exact uncorrelated and correlated admission responses;
 - capability-before-alias rejection with an empty fake;
@@ -281,18 +295,20 @@ Minimum focused evidence includes:
 - a failing response writer proving no second write or redispatch; and
 - one serial loopback integration exchange followed by `VerifyComplete`.
 
-After implementation, run focused tests, repeated deterministic tests, applicable `go vet` and race
-checks, the PR review regression checklist, an independent adversarial review, and `./scripts/check`.
-These are planned commands and not validation evidence until they execute successfully.
+Focused tests, 20 repeated deterministic runs, `go vet`, race tests, the PR review regression
+checklist, an independent adversarial review, and `./scripts/check` all passed. The completed lesson
+records the commands, environment constraint, and observed results.
 
 ## Human review checkpoint
 
-- **Production path:** Trace exact target, method, encoding, and media admission through
-  `Executor.Execute`, then follow one completed provider result through full JSON preparation,
-  headers, status, and one body write.
-- **Failure/test path:** Trace wrong-target/method/media precedence with zero handler body-read and empty-fake
-  evidence, then trace one normalized provider failure with observed-zero usage and one matching
-  context termination with zero response writes.
+- **Production path:** Trace [`handler.go`](../gateway/internal/modelturnhttp/handler.go) from exact
+  target, method, representation, and declared-trailer admission through `Executor.Execute`, then
+  trace [`presentation.go`](../gateway/internal/modelturnhttp/presentation.go) from one completed
+  provider result through full JSON preparation, headers, status, and one body write.
+- **Failure/test path:** Trace [`handler_test.go`](../gateway/internal/modelturnhttp/handler_test.go)
+  for precedence and zero body reads, [`presentation_test.go`](../gateway/internal/modelturnhttp/presentation_test.go)
+  for observed-zero usage, and [`server_test.go`](../gateway/internal/modelturnhttp/server_test.go)
+  for exact context abort, declared trailer rejection, and loopback cleanup.
 - **Invariant:** No transport or admission rejection starts provider work, and every admitted,
   non-terminated outcome becomes exactly one bounded response without reinterpreting provider
   observations or retrying work.
@@ -302,11 +318,11 @@ These are planned commands and not validation evidence until they execute succes
 
 ## Documentation impact
 
-- Add the planned Markdown lesson linked above; no visual companion is required.
-- Update the story and lesson indexes, roadmap, architecture, root/FastGate status, ADR sequencing,
-  model-turn contract, and prior handoffs without claiming runtime binding.
-- After implementation, add an evidence-backed ICGT-010 note and update the lesson from planned
-  behavior to exact source, tests, review discoveries, and validation.
+- Complete the Markdown lesson linked above with exact source and test evidence; no visual companion
+  is required.
+- Update the story and lesson indexes, roadmap, architecture, root/FastGate status, model-turn
+  contract, and prior handoffs without claiming runtime binding.
+- Add an evidence-backed ICGT-010 note with review discoveries and validation.
 - Keep Code Assist Harness unchanged. Its future FastGate client adapter remains a separately
   reviewed CAH-owned story.
 

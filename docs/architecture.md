@@ -14,9 +14,12 @@ harness-semantic mapping, and offline artifact validator. ICGT-007 implements th
 provider request, result, normalized failure, and synchronous context-aware invocation contract.
 ICGT-008 implements a strict, ordered, in-memory fake for that port. ICGT-009 implements bounded
 model-turn v1 admission, semantic gates, exact mapping, and one validated invocation through the
-injected provider port. The process still serves only `GET /healthz`; the executor is not wired to
-HTTP. ICGT-010 is the reviewed planned HTTP-presentation unit, while ICGT-011 still owns safe service
-binding and runtime concurrency. Every inference route and live provider remains unimplemented.
+injected provider port. ICGT-010 implements and tests an injectable HTTP handler with exact transport
+preflight, exhaustive non-streaming outcome presentation, response abort for matching context
+termination, and serial real-loopback evidence. The process still serves only `GET /healthz`; the
+handler is not mounted. ICGT-011 next owns safe service binding, actual-listener enforcement,
+runtime-provider selection, and bounded concurrency. Every client-reachable inference route and live
+provider remains unimplemented.
 
 The northbound model-turn protocol and southbound provider port deliberately are not the same type:
 

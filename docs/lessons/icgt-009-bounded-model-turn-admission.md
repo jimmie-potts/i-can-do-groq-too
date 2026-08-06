@@ -44,9 +44,9 @@ traffic nor calls a provider. ICGT-007 defines safe provider-domain values, but 
 whether client input is admissible. ICGT-008 can verify an interaction, but nothing yet connects a
 client document to that fake.
 
-ICGT-009 is that policy boundary. ICGT-010 can concentrate on HTTP preflight and outcome presentation
-instead of mixing parsing, correlation, routing, dispatch, and transport in one handler. ICGT-011
-separately owns service binding, runtime-provider selection, and concurrency.
+ICGT-009 is that policy boundary. ICGT-010 implements HTTP preflight and outcome presentation without
+mixing parsing, correlation, routing, dispatch, and transport in one handler. ICGT-011 separately owns
+service binding, runtime-provider selection, and concurrency.
 
 ## Junior engineer foundation
 
@@ -144,7 +144,7 @@ itself matches the exact v1 rule. The runtime must never scrape an ID from a mal
 
 The fixed uncorrelated body is 16 ASCII bytes: the text `invalid request` followed by one line feed,
 written as `invalid request\n`. It is deliberately not a `model_turn.failed` JSON document because
-that schema requires a safe `request_id`. ICGT-010 will later choose its HTTP status and media type.
+that schema requires a safe `request_id`. ICGT-010 presents it as fixed plain text with HTTP `400`.
 
 ### Capability admission precedes alias selection
 
@@ -189,12 +189,12 @@ The accessors are `RequestID() (string, bool)`, `FailureBody() ([]byte, bool)`,
 `ProviderOutcome() (provider.Result, error, bool)`. Every correlated failure reports its exact
 model-turn code. The uncorrelated rejection reports a failure body but no request ID and no protocol
 code because it is not a `model_turn.failed` document. A provider outcome reports neither a failure
-body nor a failure code. ICGT-010 can therefore choose a status from the accessor combination without
+body nor a failure code. ICGT-010 therefore chooses a status from the accessor combination without
 parsing or byte-matching the body. A failure body is copied on access, valid provider result/error
 identity is retained, and private fields prevent outside callers from constructing a valid or mixed
 state. Go callers can still construct the zero value; it is invalid, all four accessors report `false`,
 and `Execute` returns it only with a nonnil ordinary error. ICGT-009 owns the canonical failure payload;
-ICGT-010 will write it and choose the HTTP status and media type.
+ICGT-010 writes it with the matching HTTP status and media type.
 
 The ordinary Go `error` return is only for fixed caller-programming failures. A nil invoker interface
 is rejected by `NewExecutor` with `model-turn invoker is required`. A nil context or reader interface
@@ -229,14 +229,16 @@ The implemented ownership rules are:
 - conversation and instructions preserve caller order and exact Unicode;
 - an admitted request calls the provider port exactly once;
 - every returned provider alternative is validated immediately;
-- a valid provider result or error remains unchanged for ICGT-010;
+- a valid provider result or error remains unchanged for ICGT-010 presentation;
 - an invalid provider alternative becomes a fixed internal outcome without formatting, unwrapping,
   retaining, or exposing the invalid error; and
 - no goroutine, timer, retry, queue, SDK, credential, network call, or routing registry is
   introduced.
 
-HTTP method, media type, status, headers, listener binding, request-body closure, authentication,
-provider-outcome serialization, streaming, and cancellation behavior remain deferred.
+ICGT-009 defers HTTP method, media type, status, headers, and provider-outcome serialization to
+ICGT-010, which now implements them without mounting a route. Listener binding, server-owned
+request-body closure, authentication, streaming, and cancellation conformance remain outside this
+unit and are still deferred to their owners.
 
 ## Practical walkthrough
 
@@ -501,7 +503,7 @@ This unit makes no benchmark or latency claim.
 
 The 8 MiB cap affects accepted request size, not generated provider-response size. ICGT-009 does not
 serialize provider results. Its uncorrelated rejection is the fixed 16-byte `invalid request\n` body;
-ICGT-010 later assigns HTTP presentation.
+ICGT-010 assigns its HTTP presentation.
 
 ## What changed during implementation
 
@@ -551,8 +553,9 @@ authority and operational visibility, not a larger conditional hidden inside thi
 - Go [`io.LimitReader`](https://pkg.go.dev/io#LimitReader) demonstrates a stable bounded-reader
   primitive. The local loop stays explicit because it also owns mixed data/error and no-progress
   behavior.
-- Go [`net/http.MaxBytesReader`](https://pkg.go.dev/net/http#MaxBytesReader) is a future HTTP-boundary
-  comparison for ICGT-010, not an ICGT-009 dependency.
+- Go [`net/http.MaxBytesReader`](https://pkg.go.dev/net/http#MaxBytesReader) remains an HTTP-boundary
+  comparison; ICGT-010 deliberately reuses ICGT-009's existing bound instead of adding a second
+  wrapper.
 - [RFC 8259](https://www.rfc-editor.org/rfc/rfc8259) defines JSON syntax and explains duplicate-name
   and unpaired-surrogate interoperability risks.
 - [JSON Schema Draft 2020-12](https://json-schema.org/draft/2020-12) remains the language-neutral
