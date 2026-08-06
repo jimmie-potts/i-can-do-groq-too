@@ -15,9 +15,9 @@ implementation. The detailed dependency-ready sequence lives in [README.md](READ
 - Reviewed FastGate-owned model-turn v1 schema and fixtures before provider-domain code.
 - FastGate-owned provider contracts.
 - Basic deterministic fake upstream, followed later by streaming/cancellation controls.
-- Complete bounded pre-dispatch model-turn admission, including schema-valid `tool_calls` rejection
-  with deterministic zero-dispatch evidence, followed by one loopback-only fake-backed endpoint that
-  exhaustively maps completed and failed provider outcomes.
+- Completed bounded pre-dispatch model-turn admission includes schema-valid `tool_calls` rejection
+  with deterministic zero-dispatch evidence. The next outcome is one loopback-only fake-backed
+  endpoint that exhaustively maps completed and failed provider outcomes.
 
 ## M2 - FastGate streaming reliability
 

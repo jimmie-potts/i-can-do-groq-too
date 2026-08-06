@@ -49,6 +49,12 @@ func (recording *traversalRecordingError) As(any) bool {
 	return true
 }
 
+type nonComparableProviderError []byte
+
+func (nonComparableProviderError) Error() string {
+	panic("non-comparable provider error was formatted")
+}
+
 func TestRequestPreservesOrderAndOwnsItsSlices(t *testing.T) {
 	conversation := []provider.Message{
 		{Role: provider.MessageRoleUser, Content: "first"},
@@ -589,6 +595,14 @@ func TestValidateInvocationRejectsRawErrorWithoutTraversal(t *testing.T) {
 			raw.unwrapCalls,
 			raw.asCalls,
 		)
+	}
+}
+
+func TestValidateInvocationRejectsNonComparableErrorWithoutFormatting(t *testing.T) {
+	raw := nonComparableProviderError("DO-NOT-FORMAT-NON-COMPARABLE")
+
+	if err := provider.ValidateInvocation(context.Background(), provider.Result{}, raw); err == nil {
+		t.Fatal("ValidateInvocation() accepted a non-comparable raw provider error")
 	}
 }
 

@@ -386,7 +386,7 @@ standard-library `Decimal`, and focused tests preserve both integer and maximum 
 
 The completed contract review also made the parse profile normative, added duplicate-key and lone-
 surrogate fixtures, and separated the checker's size, nesting, and exact-number implementation guards
-from ICGT-009's future raw HTTP-body bound. It named the `model-turn-stream/v1` extension convention
+from ICGT-009's runtime raw-body bound. It named the `model-turn-stream/v1` extension convention
 so later stream, cancellation, and cleanup fixtures cannot silently change the base model-turn v1
 meaning.
 
@@ -417,7 +417,7 @@ The harness snapshot was refreshed and the full operation lifecycle added lazy s
 single-consumer event claim, cancellation result distinctions, and `force_cancel_cleanup()`. The
 result mapping now records terminal-text narrowing and no-text failure usage as real losses instead
 of changing the generic FastGate contract or inventing observations.
-Planned ICGT-007 now preserves optional failure usage. ICGT-009 owns complete admission and one
+ICGT-007 preserves optional failure usage. ICGT-009 owns complete admission and one
 provider-neutral fake execution, including schema-valid `tool_calls` rejection with a zero-call test;
 ICGT-010 owns the first loopback-only endpoint and exhaustive wire outcome mapping.
 
@@ -460,7 +460,7 @@ enforce a separate total HTTP-body byte limit, map status codes and authenticati
 boundary, and test its actual request/response handler against the same fixtures. This local checker
 stays small because ICGT-006 validates committed artifacts, not untrusted production traffic.
 
-ICGT-007 can now define provider-neutral non-streaming Go values downstream of this client contract,
+ICGT-007 defines provider-neutral non-streaming Go values downstream of this client contract,
 including optional bounded usage observed before failure. ICGT-009 owns complete admission,
 provider-neutral fake execution, and mandatory no-dispatch capability rejection; ICGT-010 owns the
 loopback-only endpoint and all wire outcome mapping. ICGT-011 through

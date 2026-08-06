@@ -19,7 +19,7 @@ inference transport endpoint and every live provider remain deferred to their ow
 The northbound model-turn protocol and southbound provider port deliberately are not the same type:
 
 ```text
-client wire document -> future admission/mapping -> internal provider Request -> fake or future adapter
+client wire document -> bounded admission/mapping -> internal provider Request -> fake or future adapter
 ```
 
 The internal request retains ordered conversation, generic instructions, and required capabilities.

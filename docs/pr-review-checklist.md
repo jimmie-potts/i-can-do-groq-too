@@ -109,8 +109,14 @@ validation established more than it actually did.
   accidentally satisfy a fixture that expects malformed protocol JSON?
 - Does a byte limit constrain the underlying read before allocation—for example, by requesting at
   most `limit + 1`—instead of measuring an already-unbounded buffer?
+- If the claim covers retained memory, does the test inspect backing capacity or allocation rather
+  than only logical length? Can default container growth retain more than the named limit?
 - Does a mechanism-level test record requested and cumulative bytes rather than proving only the
   eventual oversized-file error?
+- When data and an error may arrive together, does a case make the required processing order
+  observable by producing a different failure class if the error is checked first?
+- When a consecutive-failure counter must reset on progress, does a test place progress between two
+  individually sub-threshold runs rather than testing only the threshold and one-under cases?
 - Are artifact failures reported separately from normative parse or schema violations?
 - Do tests assert the exact failure class where one category subclasses another, rather than using
   a broad assertion that would accept either category?
@@ -207,6 +213,10 @@ future silent drop.
   typed-nil, wrapped-error, and simultaneous result/error cases?
 - Does rejection of untrusted error types avoid traversing provider-controlled `Unwrap` or `As`
   methods before normalization?
+- Before adding a comparability guard around interface equality, were both operands analyzed? Go
+  compares dynamic values only when their dynamic types are identical; a fixed comparable sentinel
+  may make the proposed guard redundant. Does a focused test pin the actual operand pair without
+  formatting, unwrapping, or retaining the untrusted value?
 - Is a privacy-sensitive normalized value locked to an exact allowed field inventory rather than a
   denylist that future arbitrary containers could bypass?
 
@@ -309,3 +319,21 @@ boundary, pins the reviewed literal bound, swaps and mutates second message and 
 locks `Request`, `Message`, and `Instruction` field inventories, asserts one exact first-mismatch
 diagnostic, and checks every string-bearing request field is absent from mismatch, repeated, extra,
 zero-dispatch, nil-context, and unconsumed-script diagnostics.
+
+## Evidence added during ICGT-009
+
+The ICGT-009 review found three reusable classes: default Go slice growth could retain backing
+capacity above a logically bounded body; threshold examples did not by themselves prove mixed
+data/error ordering or reset-after-progress behavior; and a review claim about interface equality
+must analyze both actual dynamic types before proposing a guard. The evidence lives in:
+
+- [bounded reading and strict parsing](../gateway/internal/modelturn/parse.go);
+- [provider return validation](../gateway/internal/provider/provider.go);
+- [model-turn boundary tests](../gateway/internal/modelturn);
+- [the ICGT-009 learning companion](lessons/icgt-009-bounded-model-turn-admission.md); and
+- [the ICGT-009 implementation note](../user-stories/notes/2026-08-03-icgt-009-bounded-model-turn-admission.md).
+
+The final tests inspect exact-limit slice capacity, pair the overflow byte with a non-EOF reader error,
+put progress between two 99-stall runs, and prove a differently typed non-comparable raw error is
+rejected without panic or formatting. The public executor repeats the relevant guarantees with
+zero/one-dispatch evidence.

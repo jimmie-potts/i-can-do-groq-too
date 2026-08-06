@@ -13,23 +13,26 @@ The repository foundation, Go toolchain decision,
 [ICGT-005 FastGate lifecycle](user-stories/icgt-005-bootstrap-fastgate-service.md),
 [ICGT-006 model-turn v1 contract](user-stories/icgt-006-select-fastgate-api.md),
 [ICGT-007 provider contract](user-stories/icgt-007-define-provider-contracts.md), and
-[ICGT-008 deterministic fake](user-stories/icgt-008-build-basic-fake-upstream.md) are implemented.
+[ICGT-008 deterministic fake](user-stories/icgt-008-build-basic-fake-upstream.md), and
+[ICGT-009 bounded admission](user-stories/icgt-009-admit-and-execute-model-turn.md) are implemented.
 The root Go module contains one standard-library-only executable that serves operational health and
 shuts down cleanly. FastGate also owns strict language-neutral request, result, and failure schemas;
 a harness mapping; 26 fixtures; a dependency-free offline contract validator; and bounded internal
 provider request, result, failure, and invocation contracts. A strict in-memory fake implements that
 port with ordered exact matching, controlled terminal outcomes, and complete-script verification.
+The internal model-turn executor bounds and strictly admits v1 request bytes, rejects unsupported
+capabilities and aliases before dispatch, and validates exactly one admitted provider return.
 
 No inference request endpoint or live provider adapter, database, Kubernetes controller, or
-simulator has been implemented yet. The provider contract and fake are internal test seams, not
-working inference behavior. [ICGT-009](user-stories/icgt-009-admit-and-execute-model-turn.md) now has
-a reviewed Planned story and Markdown lesson; its implementation has not started.
+simulator has been implemented yet. The admission executor and fake are internal seams, not a
+client-reachable inference service. ICGT-010 remains an outcome slice until its loopback-only HTTP
+contract, concurrency policy, and review checkpoints are promoted into a reviewed story and lesson.
 
 ## What we are building
 
 | Order | Component | Responsibility | Status |
 | ---: | --- | --- | --- |
-| 1 | [FastGate](gateway/README.md) | Provider transport, streaming, routing, limits, and operational telemetry | Lifecycle, v1 wire contract, internal provider contract, and deterministic fake implemented |
+| 1 | [FastGate](gateway/README.md) | Provider transport, streaming, routing, limits, and operational telemetry | Lifecycle, v1 wire contract, provider port/fake, and bounded admission implemented |
 | 2 | [LatencyLab](latency-lab/README.md) | Inference-aware load, latency, and failure experiments | Planned |
 | 3 | [ModelEndpoint Operator](model-operator/README.md) | Kubernetes reconciliation for inference-facing services | Planned |
 | 4 | [TenantPlane](control-plane/README.md) | Identity, authorization, quota, budget, usage, and audit control plane | Planned |
@@ -104,7 +107,7 @@ verified.
 
 ```text
 .
-├── gateway/              FastGate lifecycle, contracts, and deterministic fake
+├── gateway/              FastGate lifecycle, contracts, fake, and bounded admission
 ├── latency-lab/          LatencyLab scope
 ├── model-operator/       ModelEndpoint Operator scope
 ├── control-plane/        TenantPlane scope
