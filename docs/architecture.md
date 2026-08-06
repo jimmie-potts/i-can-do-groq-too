@@ -12,9 +12,11 @@ ICGT-005 implements the repository-root Go module and the first FastGate process
 implements the strict, non-streaming model-turn v1 schemas, language-neutral fixture corpus,
 harness-semantic mapping, and offline artifact validator. ICGT-007 implements the bounded internal
 provider request, result, normalized failure, and synchronous context-aware invocation contract.
-ICGT-008 implements a strict, ordered, in-memory fake for that port. The process still serves only
-`GET /healthz`; the wire contract and fake are not wired to inference execution or HTTP. The
-inference transport endpoint and every live provider remain deferred to their owning stories.
+ICGT-008 implements a strict, ordered, in-memory fake for that port. ICGT-009 implements bounded
+model-turn v1 admission, semantic gates, exact mapping, and one validated invocation through the
+injected provider port. The process still serves only `GET /healthz`; the executor is not wired to
+HTTP. ICGT-010 is the reviewed planned HTTP-presentation unit, while ICGT-011 still owns safe service
+binding and runtime concurrency. Every inference route and live provider remains unimplemented.
 
 The northbound model-turn protocol and southbound provider port deliberately are not the same type:
 
@@ -96,7 +98,7 @@ The current harness provider port already expresses the essential seam:
 - no provider SDK values in harness state.
 
 That port should not be redesigned for FastGate now. The CAH-023 direct OpenAI adapter remains the
-direct baseline. ICGT-006 commits the model-turn v1 schema and fixture source; ICGT-020 and ICGT-021
+direct baseline. ICGT-006 commits the model-turn v1 schema and fixture source; ICGT-021 and ICGT-022
 later freeze and package the adapter-ready conformance bundle. A separate Code Assist Harness story
 owns the client adapter rather than this repository writing harness code or masquerading as the
 official OpenAI endpoint.
@@ -147,7 +149,7 @@ The repositories share protocol artifacts, not internal source packages:
 | --- | --- | --- |
 | FastGate non-streaming v1 schema and valid/invalid fixtures | This repository | ICGT-006 defines and versions them under accepted ADR 0003. |
 | Future stream, cancellation, and cleanup fixtures | This repository | Added by the stories that implement and test those behaviors. |
-| Joint harness-to-FastGate profile | Both repositories, each for its owned side | ICGT-020 freezes FastGate guarantees and candidate client requirements against a pinned harness snapshot; a future CAH story must accept and implement the client side. |
+| Joint harness-to-FastGate profile | Both repositories, each for its owned side | ICGT-021 freezes FastGate guarantees and candidate client requirements against a pinned harness snapshot; a future CAH story must accept and implement the client side. |
 | `FastGateProvider` mapping and harness-port compliance | Code Assist Harness | A future CAH-owned story pins the FastGate contract and runs harness-side conformance tests. |
 
 ICGT-006 must classify every current harness request, operation, and event semantic as exact, lossy,
@@ -159,15 +161,16 @@ bounded control-safe message, and retryability; lazy operation start; single-con
 exactly-one terminal behavior; cancellation with `cancelled` versus `already_closed` outcomes;
 no-later-event behavior; repeatable local cleanup; idempotent forced local task reaping; and confirmed
 versus unconfirmed upstream cleanup. The committed harness contract bounds both provider-reported
-token counts through `MAX_MODEL_USAGE_TOKENS`. ICGT-006 maps that existing bound; ICGT-020 later pins
+token counts through `MAX_MODEL_USAGE_TOKENS`. ICGT-006 maps that existing bound; ICGT-021 later pins
 its exact harness revision and value. Fixed per-code messages are CAH-023 adapter policy, not a
-promise of the provider-neutral port.
+promise of the provider-neutral port; ICGT-010 separately owns FastGate's fixed client-facing
+presentation messages.
 
 FastGate's generic completed text is intentionally broader than CAH's terminal-text policy. A future
 CAH adapter rejects an inadmissible response as one fixed safe `invalid_response`; it does not
 sanitize, truncate, emit, or log the text. Likewise, no-text failure usage is preserved on the
 FastGate wire but is currently unrepresentable by CAH. Only failure usage after observed text can be
-deferred to the ICGT-011 stream grammar; ICGT-020 may publish the no-text omission only as explicitly
+deferred to the ICGT-012 stream grammar; ICGT-021 may publish the no-text omission only as explicitly
 lossy, while exactness requires a later CAH contract change.
 
 Required semantic loss blocks the ICGT-006 contract from proceeding unless the FastGate-owned schema
@@ -178,24 +181,24 @@ unsolicited provider-emitted tool event can only become a bounded post-dispatch 
 may be silently discarded or described as the other.
 
 Endpoint, authentication, and logical model alias are adapter configuration, not fields silently
-invented in the current harness `ProviderRequest`. The joint ICGT-020 profile pins an immutable
+invented in the current harness `ProviderRequest`. The joint ICGT-021 profile pins an immutable
 harness contract snapshot and exact FastGate schema/fixture versions, then separates ownership:
 
 - FastGate publishes only implemented, conformance-tested server behavior. The first handoff is
   loopback-only and unauthenticated; it includes logical aliases, capability admission, normalized
   wire failures, bounded identifiers, cancellation observation, and any upstream-cleanup metric later
-  defined by ICGT-017 and evidenced by ICGT-018. It advertises no authentication/TLS scheme.
+  defined by ICGT-018 and evidenced by ICGT-019. It advertises no authentication/TLS scheme.
 - Code Assist Harness owns trusted endpoint selection, credential source/scope/rotation/redaction,
   TLS verification and any explicit loopback-only HTTP exception, redirect following, ambient versus
   explicit proxy/environment trust, request/event/failure mapping, retry behavior, and local
   stream/resource cleanup. It never reuses ambient `OPENAI_BASE_URL` for this adapter.
 
-ICGT-020 freezes the versioned source artifacts. ICGT-021 packages and validates that exact content,
+ICGT-021 freezes the versioned source artifacts. ICGT-022 packages and validates that exact content,
 records the bundle manifest and digest, and may not change its semantics. A semantic change returns
 to the handoff review under a new contract version. The future CAH-owned adapter pins the published
 manifest/digest before the joint profile is called accepted in both repositories.
 
-ICGT-020 re-audits the then-current CAH provider contract instead of treating the ICGT-006 snapshot
+ICGT-021 re-audits the then-current CAH provider contract instead of treating the ICGT-006 snapshot
 as permanently adapter-ready. The first handoff is loopback-only, unauthenticated, and no-tool. A
 later non-loopback profile requires implemented FastGate authentication/TLS conformance; full
 coding-agent parity also requires a separately reviewed FastGate tool extension and compatible
@@ -204,8 +207,8 @@ harness contract.
 Local cleanup is not proof that a remote provider stopped work. “Confirmed” requires an explicit
 provider terminal cancellation/termination acknowledgement correlated to the active attempt;
 context return, local connection/body closure, or absence of later harness events remains
-unconfirmed. No current v1 runtime records that certainty. ICGT-017 must define any bounded
-operational metric, ICGT-018 owns the first live-provider evidence, and ICGT-020 freezes the handoff.
+unconfirmed. No current v1 runtime records that certainty. ICGT-018 must define any bounded
+operational metric, ICGT-019 owns the first live-provider evidence, and ICGT-021 freezes the handoff.
 A later client-visible cleanup result requires a versioned contract extension.
 
 ## The real integration tension: API semantics
@@ -222,7 +225,8 @@ Therefore:
 - do not claim that Chat Completions and Responses are interchangeable;
 - preserve direct OpenAI as the measurable baseline; and
 - materialize the FastGate-owned model-turn protocol selected in
-  [ADR 0003](adr/0003-fastgate-api-surface.md) before the first endpoint story.
+  [ADR 0003](adr/0003-fastgate-api-surface.md) before its HTTP presentation and service-binding
+  stories.
 
 A later CAH-owned FastGate adapter can translate the reviewed FastGate model-turn protocol into the
 existing harness event model using the pinned schema and fixtures published here. Chat Completions or

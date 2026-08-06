@@ -276,7 +276,8 @@ Implementation added and ran:
 
 - The story, lesson, roadmap, root, FastGate, contract, and index status documents describe the
   implemented boundary without claiming an HTTP endpoint.
-- The evidence-backed implementation note records review discoveries and the ICGT-010 handoff.
+- The evidence-backed implementation note records review discoveries and the original combined
+  ICGT-010 handoff, now clarified as ICGT-010 presentation plus ICGT-011 runtime binding.
 - The PR-review checklist records reusable allocation-capacity, observable ordering/reset, and
   actual-operands interface-equality review classes exposed by implementation review.
 

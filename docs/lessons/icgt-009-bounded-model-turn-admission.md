@@ -44,9 +44,9 @@ traffic nor calls a provider. ICGT-007 defines safe provider-domain values, but 
 whether client input is admissible. ICGT-008 can verify an interaction, but nothing yet connects a
 client document to that fake.
 
-ICGT-009 is that policy boundary. ICGT-010 can concentrate on HTTP binding and provider
-outcome presentation instead of mixing parsing, correlation, routing, dispatch, and transport in one
-handler.
+ICGT-009 is that policy boundary. ICGT-010 can concentrate on HTTP preflight and outcome presentation
+instead of mixing parsing, correlation, routing, dispatch, and transport in one handler. ICGT-011
+separately owns service binding, runtime-provider selection, and concurrency.
 
 ## Junior engineer foundation
 

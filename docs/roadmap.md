@@ -1,7 +1,8 @@
 # Roadmap
 
-**Status:** Planned outcomes. M0 and ICGT-004 through ICGT-009 are implemented; HTTP transport and
-provider-outcome presentation portions of the M1 walking skeleton remain planned.
+**Status:** Planned outcomes. M0 and ICGT-004 through ICGT-009 are implemented. ICGT-010 is the next
+implementation-ready unit; HTTP presentation, service binding, and runtime concurrency remain
+unimplemented.
 
 ## Delivery principles
 
@@ -36,13 +37,17 @@ Reviewed M1 unit sequence:
   next fake;
 - ICGT-008 (Done) implements the basic non-streaming deterministic fake upstream; and
 - ICGT-009 (Done) implements bounded strict admission and exactly one injected provider-neutral
-  invocation, with deterministic-fake evidence and no HTTP binding.
+  invocation, with deterministic-fake evidence and no HTTP binding; and
+- ICGT-010 (Planned) defines one injectable model-turn HTTP handler, exhaustive outcome
+  presentation, transport preflight, and real-loopback integration evidence without mounting the
+  handler in the executable.
 
-Later units split endpoint/outcome mapping, FastGate-owned stream grammar, and deterministic
-concurrency/cancellation behavior so each review has one primary concept. ICGT-010 binds the first
-loopback-only endpoint and exhaustively maps completed and failed provider outcomes after ICGT-009
-has implementation evidence. Its start conditions must reject non-loopback inference binding, and
-wrong method/media-type paths must prove zero fake calls.
+The remaining units keep service binding, stream grammar, and deterministic concurrency/cancellation
+behavior separate so each review has one primary concept. ICGT-010 owns HTTP presentation and proves
+that wrong target, method, encoding, or media type causes zero provider calls. ICGT-011 later owns
+mounting the route, rejecting a non-loopback actual listener, selecting a safe runtime provider or
+demo policy, and bounding concurrent work. The default command remains health-only through
+ICGT-010.
 
 ### M2 - Streaming reliability
 
@@ -68,19 +73,19 @@ tasks are narrow and evaluated independently.
 
 The handoff sequence is intentionally explicit:
 
-1. ICGT-019 compares direct-provider and gateway wire semantics, normalized outcomes, retry and
+1. ICGT-020 compares direct-provider and gateway wire semantics, normalized outcomes, retry and
    cancellation behavior, and gateway overhead using a repository-owned measurement client against
    the same bounded workload. It does not depend on a harness adapter or claim coding-task
    correctness parity.
-2. ICGT-020 starts only after ICGT-019 and a newly audited adapter-ready harness contract snapshot.
+2. ICGT-021 starts only after ICGT-020 and a newly audited adapter-ready harness contract snapshot.
    The handoff pins that immutable harness revision/provider contract plus the exact FastGate
    schema/fixture versions and source artifacts; it does not assume the historical ICGT-006 snapshot
    is still sufficient.
-3. ICGT-020 defines a candidate loopback-only, unauthenticated, no-tool profile: FastGate guarantees
+3. ICGT-021 defines a candidate loopback-only, unauthenticated, no-tool profile: FastGate guarantees
    its implemented server contract; Code Assist Harness later accepts and owns endpoint, mapping,
    failure/retry, cancellation, and local-cleanup policy for its adapter. A non-loopback profile waits
    for a separately implemented and conformance-tested FastGate authentication/TLS story.
-4. ICGT-021 packages and validates the exact frozen artifacts, records the bundle manifest/digest,
+4. ICGT-022 packages and validates the exact frozen artifacts, records the bundle manifest/digest,
    and may not change semantics without a new contract version and handoff review.
 5. A later Code Assist Harness story owns `FastGateProvider`, pins that manifest/digest, and accepts
    the client side of the joint no-tool profile. Full coding-agent parity additionally requires a
@@ -134,9 +139,9 @@ statements are complementary, not competing sequences.
 
 ## Detailed-planning boundary
 
-The detailed, linked story list ends at the delivered ICGT-009 on purpose. ICGT-010 remains an
-outcome slice until its HTTP, loopback binding, fake concurrency, outcome mapping, and review
-decisions are promoted into a reviewed story and lesson.
-Later rows in [the backlog](../user-stories/backlog.md) are outcome slices, not promises that their
-contracts are ready. Before promoting one, create its story and lesson, lock dependencies and
-exclusions, and name the exact human review checkpoint.
+The detailed, linked story list now ends at the planned ICGT-010 HTTP-presentation unit. ICGT-011
+remains an outcome slice until its actual-listener, runtime-provider, and bounded-concurrency
+decisions are promoted into a reviewed story and lesson. Later rows in
+[the backlog](../user-stories/backlog.md) are outcome slices, not promises that their contracts are
+ready. Before promoting one, create its story and lesson, lock dependencies and exclusions, and name
+the exact human review checkpoint.

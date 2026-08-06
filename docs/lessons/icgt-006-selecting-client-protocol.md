@@ -342,8 +342,8 @@ shows bounded usage.
 That failure-side usage is exact on the FastGate wire but has two different harness mappings. Usage
 on a no-text failure is lossy and currently unrepresentable because CAH accepts usage only after text
 deltas and matching completed text. A future adapter must neither drop the usage silently nor invent
-text; ICGT-020 must explicitly accept the loss or require a later CAH contract change. Only usage
-after real observed text is deferred to ICGT-011's `model-turn-stream/v1` sequence.
+text; ICGT-021 must explicitly accept the loss or require a later CAH contract change. Only usage
+after real observed text is deferred to ICGT-012's `model-turn-stream/v1` sequence.
 
 The [harness mapping](../../gateway/contracts/model-turn/v1/harness-mapping.md) keeps the current
 direct OpenAI adapter separate and pins the reviewed harness evidence at
@@ -419,7 +419,9 @@ result mapping now records terminal-text narrowing and no-text failure usage as 
 of changing the generic FastGate contract or inventing observations.
 ICGT-007 preserves optional failure usage. ICGT-009 owns complete admission and one
 provider-neutral fake execution, including schema-valid `tool_calls` rejection with a zero-call test;
-ICGT-010 owns the first loopback-only endpoint and exhaustive wire outcome mapping.
+the then-combined ICGT-010 outcome owned both the first loopback endpoint and exhaustive wire mapping.
+Readiness review on 2026-08-06 later split that future work: ICGT-010 owns HTTP presentation, while
+ICGT-011 owns runtime binding, listener enforcement, provider selection, and concurrency.
 
 The next automated review found two remaining false assurances. First, selected invariant checks
 still allowed a nested bound or enum to redefine v1 when no fixture reached that edge. The semantic
@@ -462,10 +464,10 @@ stays small because ICGT-006 validates committed artifacts, not untrusted produc
 
 ICGT-007 defines provider-neutral non-streaming Go values downstream of this client contract,
 including optional bounded usage observed before failure. ICGT-009 owns complete admission,
-provider-neutral fake execution, and mandatory no-dispatch capability rejection; ICGT-010 owns the
-loopback-only endpoint and all wire outcome mapping. ICGT-011 through
-ICGT-015 add stream grammar, observable cancellation, and cleanup evidence. ICGT-018 provides the
-first live-provider cleanup evidence, and ICGT-020 later freezes the cross-repository handoff.
+provider-neutral fake execution, and mandatory no-dispatch capability rejection; ICGT-010 owns HTTP
+preflight and wire outcome presentation, and ICGT-011 owns runtime endpoint binding. ICGT-012 through
+ICGT-016 add stream grammar, observable cancellation, and cleanup evidence. ICGT-019 provides the
+first live-provider cleanup evidence, and ICGT-021 later freezes the cross-repository handoff.
 
 ## Practical exercises
 

@@ -236,10 +236,35 @@ provider-controlled behavior during rejection.
   rather than demonstrating only element zero of today's examples?
 - Are zero calls, exact completion, an unconsumed prefix, an extra call, the exact script bound, and
   one-over rejection independently exercised with otherwise valid inputs?
+- Is the fake's ownership and concurrency contract explicit? Before mounting it behind a concurrent
+  server, does review prove that ordinary valid traffic cannot become a test panic, data race, or
+  unbounded line of mutex waiters?
+- If serialization is proposed around a single-owner fake, does it solve semantic script exhaustion
+  and mismatch behavior as well as the race, and is waiting itself bounded?
 
 Why: a strict fake is executable interaction policy. If its assertion failures share the production
 error channel, are not sticky, or are tested only with invalid fixtures and first-element examples,
-the suite can remain green after the fake stops proving the behavior callers rely on.
+the suite can remain green after the fake stops proving the behavior callers rely on. A finite test
+oracle also does not become a safe interactive runtime merely because calls are placed behind a
+mutex.
+
+### Go HTTP presentation boundaries
+
+- If a handler must produce no response, does it account for `net/http` implicitly sending `200`
+  when `ServeHTTP` returns without a write? Is `http.ErrAbortHandler` used and tested when abort is
+  the intended semantic?
+- Does “the body was not read” mean the handler made no `Request.Body.Read` call, without claiming
+  that the server never buffered, drained, or closed request bytes?
+- Does an exact origin-form target check include raw `RequestURI` and reject absolute, authority,
+  opaque, encoded, query, and trailing-slash alternatives without confusing that with Host policy?
+- If `mime.ParseMediaType` is used for a narrow lexical profile, can duplicate-identical or RFC 2231
+  parameters normalize into a shape the design intended to reject?
+- Does a HEAD test distinguish the handler's authored body from the server's required suppression of
+  wire body bytes?
+
+Why: standard-library transport behavior can add, suppress, drain, or normalize data outside the
+obvious handler calls. Direct-handler evidence and real-server evidence prove different ownership
+claims and should not be substituted for each other.
 
 ## Story ownership and governing policy
 
@@ -337,3 +362,23 @@ The final tests inspect exact-limit slice capacity, pair the overflow byte with 
 put progress between two 99-stall runs, and prove a differently typed non-comparable raw error is
 rejected without panic or formatting. The public executor repeats the relevant guarantees with
 zero/one-dispatch evidence.
+
+## Evidence added during ICGT-010 readiness
+
+The ICGT-010 readiness review found that the planned HTTP endpoint mixed presentation with runtime
+composition. The existing strict fake is finite, single-owner, and intentionally panics on unexpected
+interactions, while Go's HTTP server may call handlers concurrently. A mutex could remove one data
+race without making unscripted traffic valid or bounding waiters. A later transport review also found
+that no-write return becomes an implicit `200`, the server may drain an unread body, absolute-form
+targets can share an accepted decoded path, and media parsing normalizes some duplicate or extended
+parameters. The review therefore split runtime ownership and locked direct-handler versus real-server
+evidence explicitly:
+
+- [ICGT-010](../user-stories/icgt-010-present-model-turn-over-http.md), which owns handler preflight
+  and outcome presentation using fresh serial fakes; and
+- future ICGT-011, which owns service binding, runtime-provider selection, actual-listener loopback
+  enforcement, and bounded concurrency.
+
+The planned [ICGT-010 lesson](lessons/icgt-010-model-turn-http-presentation.md) makes the distinction
+between a real loopback handler test and a client-reachable runtime service part of the personal
+review map.
