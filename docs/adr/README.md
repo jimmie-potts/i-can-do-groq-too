@@ -19,3 +19,4 @@ supersession instead of letting current code become the only explanation.
 | [0002](0002-fake-first-openai-first-live.md) | Accepted | Prove provider contracts with a fake; use OpenAI as the first live baseline. |
 | [0003](0003-fastgate-api-surface.md) | Accepted | Use a small FastGate-owned model-turn protocol as the first client contract. |
 | [0004](0004-go-toolchain-and-module-strategy.md) | Accepted | Use Go 1.26.5 and one root module with offline local-toolchain validation. |
+| [0005](0005-local-demo-runtime-profile.md) | Accepted | Use a bounded loopback-only demo as FastGate's first runnable profile. |

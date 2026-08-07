@@ -37,11 +37,12 @@ an individual story is the reviewed contract for one small implementation unit.
 | 8 | [ICGT-008: Build the basic deterministic fake upstream](icgt-008-build-basic-fake-upstream.md) | [Basic deterministic fake](../docs/lessons/icgt-008-basic-deterministic-fake.md) | M1 | Done | ICGT-007 | High |
 | 9 | [ICGT-009: Admit and execute one fake-backed model turn](icgt-009-admit-and-execute-model-turn.md) | [Bounded model-turn admission](../docs/lessons/icgt-009-bounded-model-turn-admission.md) | M1 | Done | ICGT-008 | High |
 | 10 | [ICGT-010: Present model-turn v1 over HTTP](icgt-010-present-model-turn-over-http.md) | [Model-turn HTTP presentation](../docs/lessons/icgt-010-model-turn-http-presentation.md) | M1 | Done | ICGT-009 | High |
+| 11 | [ICGT-011: Bind the safe local demo runtime](icgt-011-bind-local-demo-runtime.md) | [Binding a safe local demo runtime](../docs/lessons/icgt-011-safe-local-runtime.md) | M1 | Planned | ICGT-010 | High |
 
 ICGT-001 through ICGT-010 are delivered and validated. ICGT-010 implements an injectable HTTP handler
-and wire presentation without mounting an inference route in the executable. ICGT-011 is the next
-outcome slice but is not implementation-ready until its story and lesson are reviewed. No
-client-reachable inference route or live provider is implemented.
+and wire presentation without mounting an inference route in the executable. ICGT-011 is the
+approved, implementation-ready final M1 unit and remains Planned. No client-reachable inference route
+or live provider is implemented.
 
 ## Later outcome slices
 
@@ -50,7 +51,6 @@ one only by adding a reviewed story and lesson after its dependency evidence exi
 
 | ID | Outcome slice | Depends on |
 | --- | --- | --- |
-| ICGT-011 | Bind the inference handler safely and choose bounded runtime concurrency | ICGT-010 |
 | ICGT-012 | Define and test the FastGate-owned model-turn SSE grammar | ICGT-011 |
 | ICGT-013 | Extend the fake with deterministic stream gates and cancellation | ICGT-012 |
 | ICGT-014 | Stream deterministic fake output through the endpoint | ICGT-013 |
@@ -59,10 +59,16 @@ one only by adding a reviewed story and lesson after its dependency evidence exi
 | ICGT-017 | Bound slow-client backpressure | ICGT-016 |
 | ICGT-018 | Record low-cardinality latency and usage metrics | ICGT-017 |
 | ICGT-019 | Add the opt-in OpenAI upstream adapter | ICGT-018 |
-| ICGT-020 | Compare direct OpenAI and FastGate at the infrastructure boundary | ICGT-019 |
+| ICGT-020 | Compare direct OpenAI and FastGate at the infrastructure boundary | ICGT-019 plus a separately reviewed and implemented runnable-live-provider security profile |
 | ICGT-021 | Define the versioned harness-to-FastGate v1 handoff | ICGT-020 plus an adapter-ready harness contract |
 | ICGT-022 | Publish FastGate v1 conformance artifacts and client integration guidance | ICGT-021 |
 | ICGT-023 | Add the first limited Groq upstream path | ICGT-020 |
+
+The runnable-live-provider security profile is an explicit dependency rather than hidden inside the
+adapter or comparison. It must select and test Host, Origin, CORS, DNS-rebinding, and
+caller-authentication behavior for the chosen local profile. Assign its story ID when M3 is promoted into a
+dependency-ready sequence; current later-slice identifiers may move at that review. Until then,
+ICGT-019 remains non-runnable and ICGT-020 cannot start.
 
 The reviewed [ICGT-009 contract](icgt-009-admit-and-execute-model-turn.md) owns the complete body and
 semantic admission boundary: its exact raw cap, strict JSON/schema profile, safe-correlation rule,
@@ -78,14 +84,20 @@ HTTP evidence. It repeats the `tool_calls` zero-dispatch proof at the HTTP bound
 injected and the default FastGate executable remains health-only; the strict deterministic fake is
 used serially in tests rather than mounted as a general concurrent runtime provider.
 
-ICGT-011 remains an outcome slice. It will own mounting health plus inference in the service,
-validating the actual listener as loopback-only, selecting a safe runtime provider or demo policy,
-and defining bounded concurrency or load shedding. Caller authentication remains unimplemented, so
-the eventual first route is not an externally deployable client surface. The first ICGT-021/022
-handoff stays loopback-only and unauthenticated; it does not advertise an unimplemented authentication
-scheme. A later reviewed FastGate auth implementation and profile must precede non-loopback use.
-Later capability work owns discovery, support, emulation, and routing—not ICGT-009's mandatory v1
-rejection.
+The planned [ICGT-011 contract](icgt-011-bind-local-demo-runtime.md) owns the final M1 runtime
+composition. It mounts health plus inference around a stateless fixed-output demo, verifies the
+actual listener is a concrete loopback `*net.TCPListener`, and applies fail-fast model-turn
+concurrency only after transport preflight. The default is 4,
+`-max-concurrent-model-turns` accepts 1 through 16, there is no waiting
+queue, and capacity rejection is a fixed `503` with no body read or provider call. Health and
+transport rejections bypass the gate. No Host allowlist or caller authentication is added, so the
+eventual first route is not an externally deployable client surface. The first ICGT-021/022 handoff
+stays loopback-only and unauthenticated; it does not advertise an unimplemented authentication
+scheme. Before that live-provider handoff can become runnable, its review must explicitly select and
+test Host, Origin, CORS, DNS-rebinding, and caller-authentication policy. A later reviewed FastGate
+auth implementation and profile must precede non-loopback use.
+Code Assist Harness remains unchanged. Later capability work owns discovery, support, emulation, and
+routing—not ICGT-009's mandatory v1 rejection.
 
 ICGT-016 owns only FastGate-local upstream goroutine/stream reaping after its bounded cleanup grace.
 Completion is local cleanup evidence, never proof that a remote provider stopped work or billing.

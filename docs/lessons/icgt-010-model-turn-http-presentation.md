@@ -13,8 +13,8 @@
   [ICGT-009 bounded admission](../../user-stories/icgt-009-admit-and-execute-model-turn.md)
 
 > This lesson links the exact implementation and focused validation delivered by ICGT-010. The
-> default FastGate command still serves only `GET /healthz`; ICGT-010 deliberately does not register
-> the handler with that command.
+> default FastGate command still serves only the operational `/healthz` surface (`GET`, with implicit
+> `HEAD`); ICGT-010 deliberately does not register the handler with that command.
 
 ## Quick summary
 
@@ -32,6 +32,12 @@ protocol meaning.
 This is a handler and presentation story only. It does not attach the handler to the default
 executable, select a runtime provider, enforce a process listener, or define concurrent use of the
 single-owner deterministic fake. ICGT-011 owns that runtime assembly and concurrency policy.
+
+Historical note: the signatures and excerpts in this verified lesson describe ICGT-010 exactly as
+delivered. [ADR 0005](../adr/0005-local-demo-runtime-profile.md) later accepted an ICGT-011 evolution:
+the constructor will require a concurrency limit and the handler will own a private bounded permit
+gate. That planned change is not represented as current code here and must preserve ICGT-010's
+preflight and presentation behavior.
 
 The central invariant is: **the HTTP layer may present an existing FastGate outcome, but it must not
 weaken admission, invent provider meaning, retry work, or expose the handler as a runtime service
@@ -145,6 +151,10 @@ The package exports one constructor:
 NewHandler(*modelturn.Executor) (http.Handler, error)
 ```
 
+This is the ICGT-010 implementation signature. ICGT-011 is accepted to supersede it with
+`NewHandler(*modelturn.Executor, int)` when its bounded runtime is implemented; until then, the
+one-argument form below remains the exact observed source.
+
 This signature keeps the transport attached to the concrete, already reviewed executor instead of
 inventing a second execution interface. A nil executor is a caller-programming error and returns the
 exact safe error `model-turn HTTP executor is required`. The constructor does not mount a route,
@@ -172,8 +182,9 @@ A decoded path that looks equivalent is not accepted as another spelling. ICGT-0
 redirects, trailing-slash normalization, query options, or compatibility paths. Target validation
 runs first, so a different target receives the fixed `404` even when its method or media type is also
 wrong. The handler requires the raw `RequestURI` plus its parsed URL fields to describe only the exact
-origin-form target. Rejecting an absolute-form target does not select a Host-header policy; ICGT-011
-still owns runtime Host and listener decisions.
+origin-form target. Rejecting an absolute-form target does not select a Host-header policy. ADR 0005
+now selects no Host allowlist and a concrete loopback `*net.TCPListener` for the planned ICGT-011
+runtime, while leaving browser-origin and live-provider security policy for separate review.
 
 ### Method precedes representation validation
 
@@ -945,10 +956,12 @@ expected for the current non-streaming contract; later streaming work owns incre
 byte.
 
 The handler creates no second whole-request buffer. The existing 8 MiB-plus-one admission bound
-remains unchanged. The final implementation is 321 production lines across two files and exposes only
-`NewHandler`. It uses the Go standard library plus existing repository packages, adds no external
-dependency, and produces no `go.sum`. No benchmark was run, so this unit makes no measured latency,
-throughput, allocation, or exact serialized-size claim.
+remains unchanged. The final ICGT-010 implementation is 321 production lines across two files and
+exposes only `NewHandler`. The accepted ICGT-011 design will evolve that constructor and add bounded
+permit state; those changes are not part of this historical line count. ICGT-010 uses the Go standard
+library plus existing repository packages, adds no external dependency, and produces no `go.sum`.
+No benchmark was run, so this unit makes no measured latency, throughput, allocation, or exact
+serialized-size claim.
 
 ## What changed during implementation
 
@@ -990,9 +1003,11 @@ needs an explicit runtime provider, listener admission, concurrency bounds, auth
 non-loopback use, cancellation and cleanup semantics, operational telemetry, and a release profile
 clients can trust.
 
-ICGT-011 owns the next runtime assembly: actual loopback-listener enforcement, provider wiring, and
-concurrency policy. It must not infer that a handler tested once with a strict fake is safe for
-concurrent serving.
+ICGT-011 owns the next runtime assembly: concrete loopback `*net.TCPListener` enforcement, provider
+wiring, and bounded permit state in the handler. It must not infer that a handler tested once with a
+strict fake is safe for concurrent serving. Before a live or billable provider is mounted in any
+runnable profile—even alongside the demo—the browser-origin, Host, Origin, CORS, DNS-rebinding, and
+caller-authentication threat model also requires separate review.
 
 ### Representative capabilities and tools
 

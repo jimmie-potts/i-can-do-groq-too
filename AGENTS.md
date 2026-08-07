@@ -5,9 +5,10 @@
 I Can Do Groq Too is a learning-first inference infrastructure monorepo. The intended components are
 FastGate, LatencyLab, ModelEndpoint Operator, TenantPlane, and FleetSim. The repository currently
 implements the root Go module, FastGate lifecycle, model-turn v1 contract tooling, provider-domain
-contracts, the basic deterministic fake, and bounded model-turn admission/execution into an injected
-provider port. The public inference endpoint, live provider adapters, and the other services remain
-planned; do not describe them as implemented.
+contracts, the basic deterministic fake, bounded model-turn admission/execution, and an unmounted
+model-turn HTTP presentation handler. ICGT-011 is implementation-ready but remains unimplemented; no
+client-reachable inference endpoint or live provider exists. The other services also remain planned;
+do not describe them as implemented.
 
 `code-assist-harness` is a separate repository and client. It owns coding workflow state, tools,
 approvals, audit records, transcripts, and correctness evaluation. This repository owns
@@ -130,6 +131,15 @@ ADR 0003 selects a small FastGate-owned model-turn protocol as the initial publi
 owns its exact schema, bounds, fixtures, and offline validation. Do not expose Responses or Chat
 Completions as the first endpoint, claim OpenAI compatibility, or add a compatibility facade without
 a separate reviewed client need.
+
+ADR 0005 selects the first runnable profile: a default stateless fixed-output demo on a verified
+concrete loopback `*net.TCPListener`, with no Host-header authentication claim and a fail-fast
+model-turn permit limit of 4 by default and 1 through 16 by configuration. ICGT-011 owns implementing
+that profile. Do not mount the strict scripted fake, add a request queue, or expose a non-loopback
+listener.
+Do not mount a live or billable provider in any runnable profile, alongside or instead of the demo,
+until a separate review selects and tests Host, Origin, CORS, DNS-rebinding, and
+caller-authentication policy, even on loopback.
 
 ## Testing and definition of done
 

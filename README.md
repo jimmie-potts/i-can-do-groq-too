@@ -16,6 +16,8 @@ The repository foundation, Go toolchain decision,
 [ICGT-008 deterministic fake](user-stories/icgt-008-build-basic-fake-upstream.md),
 [ICGT-009 bounded admission](user-stories/icgt-009-admit-and-execute-model-turn.md), and
 [ICGT-010 HTTP presentation](user-stories/icgt-010-present-model-turn-over-http.md) are implemented.
+[ICGT-011 safe local demo runtime](user-stories/icgt-011-bind-local-demo-runtime.md) is the approved,
+implementation-ready final M1 unit and remains Planned.
 The root Go module contains one standard-library-only executable that serves operational health and
 shuts down cleanly. FastGate also owns strict language-neutral request, result, and failure schemas;
 a harness mapping; 26 fixtures; a dependency-free offline contract validator; and bounded internal
@@ -28,8 +30,12 @@ non-streaming outcome, and has direct plus real-loopback test evidence.
 
 No client-reachable inference route or live provider adapter, database, Kubernetes controller, or
 simulator has been implemented yet. The executor, fake, and handler are internal seams, not a
-runnable inference service. ICGT-011 next owns safe loopback service mounting, runtime-provider
-selection, and bounded concurrency before the executable can expose the implemented handler.
+runnable inference service. ICGT-011 will mount the handler only with a stateless local demo,
+concrete loopback `*net.TCPListener` enforcement, and fail-fast bounded concurrency. It does not add
+caller authentication, a Host allowlist, a live provider, or any Code Assist Harness change. A live
+or billable provider cannot be mounted in any runnable profile—even alongside the demo—until
+browser-origin and authentication risks receive a separate reviewed policy. The accepted profile is recorded in
+[ADR 0005](docs/adr/0005-local-demo-runtime-profile.md).
 
 ## What we are building
 
@@ -110,7 +116,7 @@ verified.
 
 ```text
 .
-├── gateway/              FastGate lifecycle, contracts, fake, and bounded admission
+├── gateway/              FastGate lifecycle, contracts, fake, admission, and HTTP presentation
 ├── latency-lab/          LatencyLab scope
 ├── model-operator/       ModelEndpoint Operator scope
 ├── control-plane/        TenantPlane scope

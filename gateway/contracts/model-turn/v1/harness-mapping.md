@@ -48,7 +48,7 @@ neither reused nor weakened by this contract.
 | `instructions[].content` | `RepositoryInstruction.content`, non-empty text without a domain maximum | Lossy | FastGate accepts at most 32 generic instruction blocks and 65,536 code points per content value. The adapter must reject overflow before dispatch, never truncate or reorder it. |
 | Empty `required_capabilities` | Current `ProviderRequest` has no tool declaration | Exact | The current harness profile always sends an empty array. |
 | `required_capabilities = ["tool_calls"]` | Current request cannot declare tool schemas | Explicitly unsupported | The shape is valid for generic clients. ICGT-009 owns the v1 rejection decision/envelope and proves the fake was not called; ICGT-010 repeats and passes the ordering proof at the HTTP boundary. A future capability/tool story owns support. |
-| Authentication | Not a provider-request field; CAH-023 reads its provider key only after explicit adapter selection | Deferred | ICGT-010 implements HTTP presentation without mounting a route. ICGT-011 owns actual-listener loopback enforcement and the first runtime composition, which remains unauthenticated. ICGT-021 records that explicit loopback/no-auth profile. A separate later FastGate story and profile implement authentication/TLS before non-loopback use, while the future harness adapter owns its trusted endpoint and credential configuration outside the body. |
+| Authentication | Not a provider-request field; CAH-023 reads its provider key only after explicit adapter selection | Deferred | ICGT-010 implements HTTP presentation without mounting a route. Planned ICGT-011 owns concrete loopback `*net.TCPListener` enforcement and the first stateless-demo runtime composition, with no Host allowlist or caller authentication. Before a live provider becomes runnable, a separate review must select Host/Origin/CORS/DNS-rebinding/caller-authentication policy even on loopback. ICGT-021 may select an explicit loopback/no-auth handoff profile after that review; a separate later FastGate story implements authentication/TLS before non-loopback use, while the future harness adapter owns its trusted endpoint and profile-required credential configuration outside the body. |
 
 FastGate bounds are public admission rules, not CAH workflow quotas. CAH's model-turn count,
 provider-work deadline, assistant UTF-8 byte budget, and observed-tool limit remain harness-owned and
@@ -86,8 +86,8 @@ dispatch from `unsupported_upstream_output` after dispatch, without returning ra
 
 | Harness semantic | Classification | v1 treatment |
 | --- | --- | --- |
-| Exactly one completed or failed terminal | Exact for one non-streaming response | The completed and failed schemas are disjoint by `kind`; ICGT-010 implements and tests status/framing for each non-terminated closed outcome, but no runtime route or client adapter exists yet. |
-| `Provider.start()` creates a lazy operation; network work begins only when events are consumed | Deferred | A future CAH adapter owns lazy local construction. Neither ICGT-010's handler presentation nor ICGT-011's later runtime binding proves this client-side rule; ICGT-021 freezes it for the handoff. |
+| Exactly one completed or failed terminal | Exact for one non-streaming response | The completed and failed schemas are disjoint by `kind`; ICGT-010 implements and tests status/framing for each non-terminated closed outcome, but no runtime route or client adapter exists yet. ICGT-011 is the Planned final M1 binding story. |
+| `Provider.start()` creates a lazy operation; network work begins only when events are consumed | Deferred | A future CAH adapter owns lazy local construction. Neither ICGT-010's handler presentation nor ICGT-011's planned runtime binding proves this client-side rule; ICGT-021 freezes it for the handoff. |
 | `events()` is single-consumer and raises on a second claim | Deferred | The future CAH adapter owns the local single-claim guard. ICGT-012 defines FastGate stream grammar, while ICGT-021 freezes the cross-repository behavior. |
 | A text-completed observation is not itself terminal | Exact for a successful non-streaming result; deferred before failure | A future adapter may synthesize the successful text observation before `ProviderCompleted`. Failure-side text completion requires `model-turn-stream/v1` under ICGT-012. |
 | Partial deltas followed by failure | Deferred | The non-streaming failure body carries no partial output. ICGT-012 owns the stream grammar and ICGT-014 owns the first streamed endpoint behavior, including what admitted partial output remains visible. |
@@ -107,9 +107,11 @@ disables SDK retries and ambient routing, validates one closed SDK event automat
 its SDK stream and client.
 
 Those choices remain inside the direct adapter. A future FastGate adapter must use a separately
-trusted FastGate endpoint, its own authentication configuration, the pinned `v1` contract, and a
-logical FastGate model alias. FastGate is not an OpenAI base-URL replacement, and successful local
-connection cleanup does not prove upstream cancellation.
+trusted FastGate endpoint, any authentication configuration required by the selected reviewed
+profile, the pinned `v1` contract, and a logical FastGate model alias. The first candidate handoff is
+explicitly loopback-only and unauthenticated; a later profile may require credentials. FastGate is
+not an OpenAI base-URL replacement, and successful local connection cleanup does not prove upstream
+cancellation.
 
 ## Honest compatibility statement
 
