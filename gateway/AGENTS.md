@@ -14,9 +14,13 @@ non-streaming v1 schema, mapping, fixtures, and offline validation; ICGT-007 def
 provider-domain values and synchronous port; ICGT-008 implements its strict basic deterministic
 fake; and ICGT-009 implements bounded strict admission plus one validated injected invocation.
 ICGT-010 implements and tests the injectable HTTP-presentation handler without mounting it in the
-service. ICGT-011 next owns runtime binding, actual-listener loopback enforcement, provider selection,
-and bounded concurrency. No client-reachable inference route exists. ADR 0004 selects Go 1.26.5 and
-one root module, which ICGT-005 materializes with lifecycle behavior.
+service. The approved, implementation-ready ICGT-011 story is the final M1 unit; ADR 0005 locks a
+stateless fixed-output demo, concrete loopback `*net.TCPListener` enforcement, and fail-fast
+post-preflight concurrency with a default of 4 and CLI range of 1 through 16. Health and transport
+rejection bypass the gate; there is no waiting queue, Host allowlist, caller-authentication claim,
+live provider, or Code Assist Harness change. No client-reachable inference route exists until that
+story is implemented. ADR 0004
+selects Go 1.26.5 and one root module, which ICGT-005 materializes with lifecycle behavior.
 
 ## Reviewable package boundaries
 

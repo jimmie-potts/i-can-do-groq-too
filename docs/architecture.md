@@ -16,15 +16,26 @@ ICGT-008 implements a strict, ordered, in-memory fake for that port. ICGT-009 im
 model-turn v1 admission, semantic gates, exact mapping, and one validated invocation through the
 injected provider port. ICGT-010 implements and tests an injectable HTTP handler with exact transport
 preflight, exhaustive non-streaming outcome presentation, response abort for matching context
-termination, and serial real-loopback evidence. The process still serves only `GET /healthz`; the
-handler is not mounted. ICGT-011 next owns safe service binding, actual-listener enforcement,
-runtime-provider selection, and bounded concurrency. Every client-reachable inference route and live
+termination, and serial real-loopback evidence. The process still serves only the operational
+`/healthz` surface (`GET`, with implicit `HEAD`); the handler is not mounted. The approved,
+implementation-ready ICGT-011 story is the final M1 unit. It
+plans service binding with a stateless fixed-output demo, concrete loopback `*net.TCPListener`
+enforcement, and fail-fast bounded concurrency after transport preflight: default 4, CLI range 1
+through 16, and no waiting queue. Health and transport rejections bypass that gate. The profile adds
+no Host allowlist or caller authentication and makes no non-loopback safety claim. A live or billable
+provider cannot be mounted in any runnable profile—even alongside the demo—until browser-origin and
+authentication risk has a separately reviewed policy. Every client-reachable inference route and live
 provider remains unimplemented.
+[ADR 0005](adr/0005-local-demo-runtime-profile.md) records the accepted local-runtime profile and its
+deferred security and capacity policies.
 
 The northbound model-turn protocol and southbound provider port deliberately are not the same type:
 
 ```text
-client wire document -> bounded admission/mapping -> internal provider Request -> fake or future adapter
+client wire document -> bounded admission/mapping -> internal provider Request
+                                                       -> strict test fake
+                                                       -> planned local demo
+                                                       -> future live adapter
 ```
 
 The internal request retains ordered conversation, generic instructions, and required capabilities.
@@ -114,6 +125,7 @@ Harness Provider implementations
 
 FastGate upstream implementations
   - Deterministic fake upstream  implemented local infrastructure proof
+  - Stateless local demo         planned final M1 runnable profile
   - OpenAI upstream              first live baseline
   - Groq upstream                later measured expansion
   - Self-hosted upstream         later cache/runtime experiments
@@ -187,10 +199,12 @@ Endpoint, authentication, and logical model alias are adapter configuration, not
 invented in the current harness `ProviderRequest`. The joint ICGT-021 profile pins an immutable
 harness contract snapshot and exact FastGate schema/fixture versions, then separates ownership:
 
-- FastGate publishes only implemented, conformance-tested server behavior. The first handoff is
-  loopback-only and unauthenticated; it includes logical aliases, capability admission, normalized
-  wire failures, bounded identifiers, cancellation observation, and any upstream-cleanup metric later
-  defined by ICGT-018 and evidenced by ICGT-019. It advertises no authentication/TLS scheme.
+- FastGate publishes only implemented, conformance-tested server behavior. The first candidate
+  handoff is loopback-only and unauthenticated only after a reviewed Host/Origin/CORS/DNS-rebinding/
+  caller-authentication decision for its live-provider runtime; it includes logical aliases,
+  capability admission, normalized wire failures, bounded identifiers, cancellation observation, and
+  any upstream-cleanup metric later defined by ICGT-018 and evidenced by ICGT-019. It advertises no
+  authentication/TLS scheme.
 - Code Assist Harness owns trusted endpoint selection, credential source/scope/rotation/redaction,
   TLS verification and any explicit loopback-only HTTP exception, redirect following, ambient versus
   explicit proxy/environment trust, request/event/failure mapping, retry behavior, and local
@@ -202,9 +216,10 @@ to the handoff review under a new contract version. The future CAH-owned adapter
 manifest/digest before the joint profile is called accepted in both repositories.
 
 ICGT-021 re-audits the then-current CAH provider contract instead of treating the ICGT-006 snapshot
-as permanently adapter-ready. The first handoff is loopback-only, unauthenticated, and no-tool. A
-later non-loopback profile requires implemented FastGate authentication/TLS conformance; full
-coding-agent parity also requires a separately reviewed FastGate tool extension and compatible
+as permanently adapter-ready. The first candidate handoff is loopback-only, unauthenticated, and
+no-tool after the local live-provider threat-model review. A later non-loopback profile requires
+implemented FastGate authentication/TLS conformance; full coding-agent parity also requires a
+separately reviewed FastGate tool extension and compatible
 harness contract.
 
 Local cleanup is not proof that a remote provider stopped work. “Confirmed” requires an explicit

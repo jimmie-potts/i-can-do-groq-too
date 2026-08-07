@@ -31,6 +31,7 @@ evidence.
 | ICGT-008 | [Basic deterministic fake upstream](icgt-008-basic-deterministic-fake.md) | Verified against implementation | Not required - Markdown implementation lesson |
 | ICGT-009 | [Bounded model-turn admission](icgt-009-bounded-model-turn-admission.md) | Verified against implementation | Not required - Markdown implementation lesson |
 | ICGT-010 | [Model-turn HTTP presentation](icgt-010-model-turn-http-presentation.md) | Verified against implementation | Not required - Markdown implementation lesson |
+| ICGT-011 | [Binding a safe local demo runtime](icgt-011-safe-local-runtime.md) | Planned | Not required - Markdown implementation lesson |
 
 Use [the lesson template](lesson-template.md) for new implementation-ready units and read
 [the scoped guidance](AGENTS.md) before editing lesson evidence.

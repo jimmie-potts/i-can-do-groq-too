@@ -79,9 +79,13 @@ ICGT-006 materializes the exact v1 fields, bounds, normalized-error meanings, st
 profile, unknown-field policy, base/extension versioning mechanics, mapping, fixtures, and offline
 artifact validation. Bounded transport/body admission and provider-neutral execution belong to
 ICGT-009. ICGT-010 owns the exact HTTP request target and complete provider-outcome presentation;
-ICGT-011 separately owns service mounting, actual-listener loopback enforcement, runtime-provider
-selection, and bounded concurrency. The accepted direction and committed schema still do not claim
-that an endpoint, streaming implementation, cancellation behavior, or runtime conformance exists.
+ICGT-011 separately owns service mounting, concrete loopback `*net.TCPListener` enforcement, runtime-provider
+selection, and bounded concurrency. [ADR 0005](0005-local-demo-runtime-profile.md) selects its
+implementation-ready local profile: a stateless fixed-output demo, actual loopback TCP, no Host
+allowlist or caller-authentication claim, and a fail-fast post-preflight permit gate with default 4,
+CLI range 1 through 16, and no waiting queue. Health and transport rejections bypass the permit gate.
+ICGT-011 remains Planned, so the accepted direction and committed schema still do not claim that an
+endpoint, streaming implementation, cancellation behavior, or runtime conformance exists.
 
 This implementation sequencing was clarified on 2026-08-06 after ICGT-009 exposed a concurrency
 boundary: the strict deterministic fake is a finite, single-owner test oracle, while a normal Go HTTP

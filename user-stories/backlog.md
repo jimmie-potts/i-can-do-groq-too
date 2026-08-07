@@ -19,8 +19,10 @@ implementation. The detailed dependency-ready sequence lives in [README.md](READ
   with deterministic zero-dispatch evidence.
 - A completed HTTP-presentation unit exhaustively maps completed and failed provider outcomes without
   mounting the strict fake in the executable.
-- A later service-binding unit owns actual loopback enforcement, runtime-provider selection, and
-  bounded concurrency before the inference route becomes client-reachable.
+- The planned final M1 service-binding unit owns a stateless demo, concrete loopback
+  `*net.TCPListener` enforcement, and fail-fast bounded concurrency before the inference route becomes
+  client-reachable. It adds no Host allowlist or caller authentication and makes no non-loopback
+  deployment claim.
 
 ## M2 - FastGate streaming reliability
 
@@ -33,7 +35,11 @@ implementation. The detailed dependency-ready sequence lives in [README.md](READ
 
 ## M3 - Live providers and harness integration
 
-- Opt-in OpenAI adapter with automatic SDK retries disabled.
+- Opt-in OpenAI adapter with automatic SDK retries disabled. It may not be mounted in any runnable
+  profile, alongside or instead of the demo and even on loopback, until a reviewed
+  Host/Origin/CORS/DNS-rebinding/caller-authentication profile is implemented and tested.
+- A separate small security-profile story owns that runnable policy before direct-versus-gateway
+  comparison; it is not hidden inside adapter construction or measurement.
 - Direct-versus-gateway wire, failure, retry, cancellation, and overhead measurements; no coding-task
   parity claim before a harness adapter exists. Use a repository-owned measurement client rather
   than depending on Code Assist Harness.

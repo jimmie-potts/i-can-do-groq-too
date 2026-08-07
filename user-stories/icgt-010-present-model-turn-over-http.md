@@ -26,7 +26,8 @@ This story owns HTTP presentation, not listener or runtime composition:
 ICGT-008's strict fake is finite and single-owner, while a normal HTTP server may invoke a handler
 concurrently. ICGT-010 therefore uses a fresh fake serially in tests and proves one real loopback HTTP
 exchange without mounting that fake in the runnable command. ICGT-011 separately owns service
-binding, runtime-provider selection, actual-listener loopback enforcement, and bounded concurrency.
+binding, runtime-provider selection, concrete loopback `*net.TCPListener` enforcement, and bounded
+concurrency.
 
 The implementation is one handler/presenter package with 321 production lines: one line above the
 review heuristic after adversarial review added declared-trailer protection. Splitting that transport
@@ -47,13 +48,20 @@ needs more than the one exported constructor locked below.
 - Prove one real loopback HTTP exchange with one exact deterministic-fake script.
 - Keep the default FastGate service and executable health-only.
 
+These scope and constructor bullets describe ICGT-010 as delivered. The accepted ICGT-011 design
+later supersedes the one-argument constructor with a required bounded-concurrency argument and adds
+the handler's private permit state. Until ICGT-011 is implemented, the source and verified excerpts
+remain exactly as recorded here; the later story must preserve this unit's transport and presentation
+semantics while evolving that construction boundary.
+
 ## Locked behavior
 
 ### Small Go boundary
 
 - `NewHandler` rejects a nil executor with exactly `model-turn HTTP executor is required`.
-- The returned handler owns no mutable request state, goroutine, timer, retry, queue, or logger. That
-  does not claim the injected executor and invoker are safe for concurrent calls.
+- As delivered by ICGT-010, the returned handler owns no mutable request state, goroutine, timer,
+  retry, queue, or logger. That does not claim the injected executor and invoker are safe for
+  concurrent calls. ICGT-011 is accepted to add only bounded permit state at this boundary.
 - The handler uses only the public `modelturn.Outcome` and provider value accessors. It does not parse
   an existing failure body, inspect private outcome state, or accept provider SDK types.
 - Private typed response structures and `encoding/json` construct completed and provider-failure
@@ -312,7 +320,7 @@ records the commands, environment constraint, and observed results.
 - **Invariant:** No transport or admission rejection starts provider work, and every admitted,
   non-terminated outcome becomes exactly one bounded response without reinterpreting provider
   observations or retrying work.
-- **Deferred:** Runtime mounting, actual-listener loopback enforcement, Host policy, interactive demo
+- **Deferred:** Runtime mounting, concrete loopback `*net.TCPListener` enforcement, Host policy, interactive demo
   provider, concurrent fake use, cancellation conformance, streaming, deadlines, cleanup,
   backpressure, authentication, TLS, retries, telemetry, and live providers.
 

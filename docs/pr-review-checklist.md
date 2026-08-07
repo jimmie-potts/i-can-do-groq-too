@@ -209,6 +209,9 @@ future silent drop.
   encoding inside the accepted range?
 - If an error channel carries caller cancellation, must the returned sentinel match the supplied
   caller context rather than trusting an adapter's assertion?
+- Does every timing-sensitive requirement name the implementation observation or synchronization
+  point that can enforce it? An event promised merely “before return” can occur after the final
+  observation and is not atomically enforceable.
 - Are success, normalized failure, and caller termination mutually exclusive, including zero-value,
   typed-nil, wrapped-error, and simultaneous result/error cases?
 - Does rejection of untrusted error types avoid traversing provider-controlled `Unwrap` or `As`
@@ -272,10 +275,60 @@ mutex.
   merely time out, while a direct test separately pins the exact abort sentinel and zero writes?
 - If JSON serialization failure is structurally unreachable with current typed documents, is its
   fallback tested through a pure preparation seam rather than a mutable production hook?
+- If a top-level dispatcher selects an operational path from parsed `URL.Path`, does a matrix pin
+  GET/HEAD/wrong-method/query/encoded behavior plus trailing slash, repeated slash, dot segment, and
+  nil-request/URL fallthrough without a redirect or request rewrite?
+- If loopback-only serving is a safety claim, does production validate the concrete listener type and
+  concrete TCP address rather than trusting configuration or an arbitrary wrapper's reported
+  `Addr()`? Does rejection close owned resources exactly once with diagnostics that cannot expose an
+  untrusted cleanup error?
+- Before listener ownership transfers, are nil context, nil interface, and every nil-capable dynamic
+  listener value handled without calling `Addr` or `Close`? Does a typed-nil non-TCP wrapper prove the
+  code did not special-case only the admitted concrete type? Is ownership on each early error
+  explicit, with only dynamically nonnil owned admission rejections closed by the callee?
+- Before a live or billable provider becomes runnable, has review selected and tested Host, Origin,
+  CORS, DNS-rebinding, and caller-authentication policy even when the listener remains loopback-only?
+  Strict media types and absent CORS permission are not a security boundary.
 
 Why: standard-library transport behavior can add, suppress, drain, or normalize data outside the
 obvious handler calls. Direct-handler evidence and real-server evidence prove different ownership
 claims and should not be substituted for each other.
+
+### Go command-line parsing boundaries
+
+- Can a standard-library parser quote the complete raw flag name or value in both its output and
+  returned error?
+- Is parser output suppressed or replaced, and is the raw parse error discarded rather than wrapped
+  into a process-level log?
+- Does malformed numeric state remain sticky when a later duplicate flag is valid?
+- Do hostile nonnumeric and extremely long values prove one exact bounded content-free error, empty
+  parser output, absence of a fake sensitive marker, and zero downstream construction?
+
+Why: configuration text is untrusted and can contain an accidentally pasted credential or an
+extremely long token. A fixed validation category is safer than allowing a convenience parser to turn
+the complete value into a diagnostic.
+
+### Bounded handler admission and load shedding
+
+- Is the permit acquired before the first expensive or body-retaining operation, rather than only
+  around the provider call after a bounded-but-large body has already been admitted?
+- If cheap transport checks intentionally run before the permit, do saturated tests prove their
+  `404`, `405`, and `415` precedence remains stable while a transport-valid request receives the
+  overload response?
+- Is acquisition nonblocking, with no hidden request queue, worker goroutine, retry, or timer?
+- Is the configured capacity validated before allocating the permit channel or another proportional
+  data structure?
+- Does one permit remain owned through response writing, and is it released with `defer` on normal
+  return, writer failure, and panic without recovering `http.ErrAbortHandler`?
+- Do channel-controlled tests, rather than timing sleeps, prove exactly the limit enters, the next
+  request reads no body and starts no provider work, health remains available, and a later request can
+  reuse a returned permit?
+- Does documentation distinguish bounded admitted model-turn work from still-unbounded TCP
+  connections, header parsing, and `net/http` request goroutines?
+
+Why: a semaphore's presence does not prove that the expensive resource is bounded. Placing it too
+late leaves body memory unbounded; placing it too early can silently replace useful transport errors;
+forgetting panic-safe release can permanently reduce capacity after a canceled request.
 
 ## Story ownership and governing policy
 
@@ -405,9 +458,43 @@ evidence explicitly:
 
 - [ICGT-010](../user-stories/icgt-010-present-model-turn-over-http.md), which owns handler preflight
   and outcome presentation using fresh serial fakes; and
-- future ICGT-011, which owns service binding, runtime-provider selection, actual-listener loopback
-  enforcement, and bounded concurrency.
+- [ICGT-011](../user-stories/icgt-011-bind-local-demo-runtime.md), which owns service binding,
+  runtime-provider selection, concrete loopback `*net.TCPListener` enforcement, and bounded
+  concurrency.
 
 The [ICGT-010 lesson](lessons/icgt-010-model-turn-http-presentation.md) makes the distinction
 between a real loopback handler test and a client-reachable runtime service part of the personal
 review map.
+
+## Evidence added during ICGT-011 readiness
+
+The ICGT-011 readiness review found that a provider-only concurrency limit would still allow every
+concurrent request to retain up to the model-turn boundary's 8 MiB body cap. A full outer wrapper
+would bound that work but could replace ICGT-010's exact transport errors during saturation. The
+accepted design therefore places a nonblocking permit after target, method, and representation
+preflight but before the first body read, and holds it through the response write. The review also
+made the negative claims explicit: the permit does not bound connections, header parsing, or the
+request goroutines that `net/http` creates before handler admission.
+
+The planned evidence and alternatives are locked in:
+
+- [ADR 0005](adr/0005-local-demo-runtime-profile.md);
+- [the ICGT-011 delivery contract](../user-stories/icgt-011-bind-local-demo-runtime.md); and
+- [the ICGT-011 learning companion](lessons/icgt-011-safe-local-runtime.md).
+
+Implementation must replace this planned evidence with channel-controlled saturation, permit-reuse,
+abort-unwind, full health-dispatch, concrete-listener, fixed cleanup-diagnostic, and real-loopback
+tests before ICGT-011 is Done. The same review also found that a listener wrapper can lie through
+`Addr()` and that a local live provider would introduce browser-origin and DNS-rebinding risk before
+any remote deployment; those checks now remain explicit prerequisites rather than implied safety.
+
+PR #11's automated review then exposed three additional reusable specification traps. First,
+“canceled before return” named no enforceable observation point, so the demo now locks one initial
+`ctx.Err()` observation. Cancellation racing that observation may yield either allowed outcome, while
+cancellation after a nil observation does not overwrite the selected result. Second, a typed-nil
+listener is not limited to `*net.TCPListener`; any nil-capable dynamic listener value is missing input
+before method calls or ownership, and a typed-nil custom wrapper must prove that rule. Third, Go's
+standard integer flag diagnostics quote the complete malformed value; command parsing must instead
+return one fixed error with no parser output or raw token, retain invalidity across duplicate flags,
+and prove hostile values trigger no runtime construction. These are planned regression requirements
+until the ICGT-011 implementation supplies the named tests.

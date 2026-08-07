@@ -27,14 +27,18 @@ The initial implementation sequence is intentionally smaller than “build a gat
    with the deterministic fake and without HTTP binding—completed by ICGT-009;
 7. add an injectable HTTP handler that rejects invalid transport requests before dispatch and maps
    every completed or failed provider outcome—completed by ICGT-010;
-8. mount that handler only after loopback-listener, runtime-provider, and bounded-concurrency policy
-   is reviewed—future ICGT-011;
+8. bind that handler to a safe local demo with concrete loopback `*net.TCPListener` and bounded
+   concurrency policy—planned by
+   [ICGT-011](../user-stories/icgt-011-bind-local-demo-runtime.md), the final M1 unit;
 9. define the FastGate-owned model-turn SSE grammar, then extend the fake with deterministic stream
    gates and cancellation;
 10. stream fake output and propagate client cancellation;
 11. add deadlines, slow-client bounds, and low-cardinality metrics;
-12. add OpenAI as the first opt-in live upstream; and
-13. add Groq only after direct and gateway baselines can be compared.
+12. add OpenAI as the first opt-in live upstream without mounting it in a runnable profile;
+13. select and implement the Host/Origin/CORS/DNS-rebinding/caller-authentication profile required
+    before that live adapter becomes runnable;
+14. compare the direct and gateway baselines; and
+15. add Groq only after those baselines can be compared.
 
 Steps 1 through 7 are complete. The
 [ICGT-009 delivery contract](../user-stories/icgt-009-admit-and-execute-model-turn.md),
@@ -45,7 +49,9 @@ zero/one-dispatch, and provider-return evidence. The
 [`modelturnhttp` implementation](internal/modelturnhttp), and
 [verified lesson](../docs/lessons/icgt-010-model-turn-http-presentation.md) provide exact HTTP
 preflight, exhaustive outcome presentation, response-abort, write-failure, HEAD, and serial-loopback
-evidence. Step 8 remains an outcome slice; the executable stays health-only after ICGT-010.
+evidence. Step 8 is now implementation-ready but unimplemented; the executable stays health-only
+after ICGT-010. Its planned lesson is
+[Binding a safe local demo runtime](../docs/lessons/icgt-011-safe-local-runtime.md).
 
 The provider-neutral seam lives in [`internal/provider`](internal/provider). It carries only ordered
 conversation, generic instructions, required capabilities, completed text, optional usage, and
@@ -68,6 +74,17 @@ exactly `POST /v1/model-turns`, rejects unsupported transport forms before body 
 each non-terminated closed outcome into one bounded response, and aborts matching caller-context
 termination without inventing an HTTP result. It is independently tested but not registered by the
 service or command; ICGT-011 owns that runtime composition and its concurrency policy.
+
+The approved ICGT-011 profile is deliberately local and demonstrative. The command will use a
+stateless fixed-output demo provider rather than the finite, single-owner scripted fake. Before
+serving, it will verify the actual listener is a concrete loopback `*net.TCPListener`. After
+model-turn transport preflight, at most four admitted turns may be active by default;
+`-max-concurrent-model-turns` accepts 1 through 16, and a full gate rejects immediately with a fixed
+`503` without a waiting queue. Health requests
+and transport rejections bypass that capacity gate. The local profile adds no Host allowlist or
+caller authentication and must not be described as safe for non-loopback deployment. See
+[ADR 0005](../docs/adr/0005-local-demo-runtime-profile.md) for the accepted alternatives and exact
+overload envelope.
 
 ## Run the lifecycle foundation
 
@@ -117,9 +134,12 @@ CAH-023 defines the harness's strict direct OpenAI adapter. After FastGate publi
 and conformance bundle, a later Code Assist Harness story can implement a separate `FastGateProvider`
 for its existing provider port. This repository does not own that harness client code.
 
-The first handoff is loopback-only, unauthenticated, and no-tool. A versioned FastGate tool extension
-plus a compatible CAH contract is required before full coding-agent parity; a separately implemented
-authentication/TLS profile is required before non-loopback use.
+The first candidate handoff is loopback-only, unauthenticated, and no-tool. Its live-provider runtime
+still requires an explicit Host/Origin/CORS/DNS-rebinding/caller-authentication review; that review may
+select no caller authentication for the bounded local profile but cannot treat loopback or absent CORS
+as proof of identity. A versioned FastGate tool extension plus a compatible CAH contract is required
+before full coding-agent parity; a separately implemented authentication/TLS profile is required
+before non-loopback use.
 
 ICGT-020's earlier infrastructure comparison uses a small repository-owned measurement client for
 the same bounded direct-provider and gateway workload. It does not use Code Assist Harness or claim

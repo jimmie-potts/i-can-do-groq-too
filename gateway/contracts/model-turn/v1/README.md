@@ -6,8 +6,10 @@ HTTP endpoint, authenticate a caller, select a provider, perform inference, stre
 work, or prove cleanup behavior.
 
 ICGT-010 separately implements and tests an injectable HTTP presentation handler for these shapes.
-The default service does not mount it; ICGT-011 owns runtime binding, actual-listener enforcement,
-provider selection, and bounded concurrency.
+The default service does not mount it. The approved, implementation-ready
+[ICGT-011 story](../../../../user-stories/icgt-011-bind-local-demo-runtime.md) remains Planned; under
+[ADR 0005](../../../../docs/adr/0005-local-demo-runtime-profile.md), it will bind a stateless local
+demo with concrete loopback `*net.TCPListener` enforcement and fail-fast bounded concurrency.
 
 ## Contract files
 
@@ -121,9 +123,10 @@ The body has no credential field. Caller authentication is an out-of-body transp
 for a later non-loopback authentication profile and implementation story. The non-normative
 placeholder is `Authorization: Bearer <credential>`; it shows where authentication belongs without
 selecting a token format or implemented header contract. The implemented ICGT-010 handler defines HTTP
-presentation but does not mount a route. ICGT-011 later owns inference-route startup, actual-listener
-loopback enforcement, runtime-provider selection, and concurrency; it cannot claim authenticated
-operation.
+presentation but does not mount a route. Planned ICGT-011 owns inference-route startup, concrete
+loopback `*net.TCPListener` enforcement, a stateless fixed-output demo, and fail-fast concurrency after transport
+preflight. It adds neither a Host allowlist nor caller authentication and cannot claim authenticated
+or non-loopback operation.
 
 ### Capability admission
 
@@ -210,6 +213,8 @@ chose the truthful code or flag; the ICGT-010 handler tests supply that presenta
 delivered [ICGT-010 story](../../../../user-stories/icgt-010-present-model-turn-over-http.md) locks the
 exact request target, transport-preflight precedence, statuses, media types, fixed provider messages,
 and matching-context response abort. The handler exists, but runtime binding remains unimplemented.
+The linked [ICGT-011 lesson](../../../../docs/lessons/icgt-011-safe-local-runtime.md) is planned and
+must not be treated as runtime evidence until that story is implemented and validated.
 
 Provider exceptions, response bodies, headers, credentials, raw tool arguments, and unbounded text
 do not belong in this shape. Usage remains observation rather than billing proof or retry authority,
@@ -223,8 +228,10 @@ exact 16-byte ASCII response `invalid request\n`—the text `invalid request` fo
 byte; that response is not a `model_turn.failed` document.
 ICGT-010 assigns its HTTP status and media type. Caller authentication is outside this envelope
 and remains unimplemented through ICGT-011; `authentication_failed` means upstream authentication
-only. The first ICGT-021/022 handoff remains loopback-only and unauthenticated. A separate FastGate
-authentication/TLS implementation and reviewed profile must precede non-loopback use.
+only. The first ICGT-021/022 handoff may remain loopback-only and unauthenticated only after its
+review explicitly selects and tests Host, Origin, CORS, DNS-rebinding, and caller-authentication
+policy for the live-provider runtime. A separate FastGate authentication/TLS implementation and
+reviewed profile must precede non-loopback use.
 
 ## Versioning rule
 

@@ -1,8 +1,7 @@
 # Roadmap
 
-**Status:** Planned outcomes. M0 and ICGT-004 through ICGT-010 are implemented. ICGT-011 is the next
-outcome slice; service mounting, actual-listener enforcement, runtime-provider selection, and bounded
-concurrency remain unimplemented.
+**Status:** Planned outcomes. M0 and ICGT-004 through ICGT-010 are implemented. ICGT-011 is the
+approved, implementation-ready final M1 unit; its local-demo runtime binding remains unimplemented.
 
 ## Delivery principles
 
@@ -23,8 +22,10 @@ Stories ICGT-001 through ICGT-003 are delivered by the initial bootstrap.
 
 ### M1 - FastGate non-streaming walking skeleton
 
-**Outcome:** A small Go service accepts one reviewed request contract, calls a deterministic fake
-upstream, returns one normalized non-streaming result, and proves a meaningful failure path.
+**Outcome:** A small Go service accepts one reviewed request contract, calls a deterministic
+provider-neutral implementation, returns one normalized non-streaming result, and proves a
+meaningful failure path. The strict fake remains the test oracle; the runnable profile uses the
+stateless demo selected in ADR 0005.
 
 Reviewed M1 unit sequence:
 
@@ -35,18 +36,23 @@ Reviewed M1 unit sequence:
   versioning rule, and offline validator for the FastGate-owned protocol selected in ADR 0003;
 - ICGT-007 (Done) defines only the provider-neutral non-streaming gateway contract required by the
   next fake;
-- ICGT-008 (Done) implements the basic non-streaming deterministic fake upstream; and
+- ICGT-008 (Done) implements the basic non-streaming deterministic fake upstream;
 - ICGT-009 (Done) implements bounded strict admission and exactly one injected provider-neutral
-  invocation, with deterministic-fake evidence and no HTTP binding; and
+  invocation, with deterministic-fake evidence and no HTTP binding;
 - ICGT-010 (Done) implements one injectable model-turn HTTP handler, exhaustive outcome presentation,
   transport preflight, context-termination abort behavior, and real-loopback integration evidence
-  without mounting the handler in the executable.
+  without mounting the handler in the executable; and
+- [ICGT-011](../user-stories/icgt-011-bind-local-demo-runtime.md) (Planned) will bind the safe local
+  demo runtime, enforce a concrete loopback `*net.TCPListener`, and bound concurrent model-turn work.
 
-The remaining units keep service binding, stream grammar, and deterministic concurrency/cancellation
-behavior separate so each review has one primary concept. ICGT-010 owns HTTP presentation and proves
-that wrong target, method, encoding, or media type causes zero provider calls. ICGT-011 later owns
-mounting the route, rejecting a non-loopback actual listener, selecting a safe runtime provider or
-demo policy, and bounding concurrent work. The default command remains health-only after ICGT-010.
+ICGT-010 owns HTTP presentation and proves that wrong target, method, encoding, or media type causes
+zero provider calls. ICGT-011 is the final M1 service-binding unit: it selects a stateless fixed-output
+demo, rejects any listener other than a concrete loopback `*net.TCPListener`, and adds fail-fast
+concurrency after transport preflight with default 4, `-max-concurrent-model-turns` range 1 through
+16, and no waiting queue.
+Health and transport rejections bypass the gate. It adds no Host allowlist, caller authentication,
+live provider, or Code Assist Harness change. The default command remains health-only until ICGT-011
+is implemented. [ADR 0005](adr/0005-local-demo-runtime-profile.md) records the approved profile.
 
 ### M2 - Streaming reliability
 
@@ -70,23 +76,31 @@ Code Assist Harness-owned adapter can consume without weakening its direct OpenA
 Groq follows only after the OpenAI baseline and deterministic contract tests exist. Initial Groq
 tasks are narrow and evaluated independently.
 
+An opt-in live adapter may be implemented and tested in M3, but it may not be mounted in any runnable
+profile—alongside or instead of the stateless demo, even on loopback—until a separate review selects
+and tests the Host, Origin, CORS, DNS-rebinding, and caller-authentication threat model. Strict JSON
+and absent CORS permission are not treated as security guarantees.
+
 The handoff sequence is intentionally explicit:
 
-1. ICGT-020 compares direct-provider and gateway wire semantics, normalized outcomes, retry and
+1. After ICGT-019, a separate small story must select and implement the runnable live-provider
+   Host/Origin/CORS/DNS-rebinding/caller-authentication profile. Its identifier is assigned when M3
+   becomes dependency-ready; it must not be hidden inside adapter construction or measurement.
+2. Only after that profile, ICGT-020 compares direct-provider and gateway wire semantics, normalized outcomes, retry and
    cancellation behavior, and gateway overhead using a repository-owned measurement client against
    the same bounded workload. It does not depend on a harness adapter or claim coding-task
    correctness parity.
-2. ICGT-021 starts only after ICGT-020 and a newly audited adapter-ready harness contract snapshot.
+3. ICGT-021 starts only after ICGT-020 and a newly audited adapter-ready harness contract snapshot.
    The handoff pins that immutable harness revision/provider contract plus the exact FastGate
    schema/fixture versions and source artifacts; it does not assume the historical ICGT-006 snapshot
    is still sufficient.
-3. ICGT-021 defines a candidate loopback-only, unauthenticated, no-tool profile: FastGate guarantees
+4. ICGT-021 defines a candidate loopback-only, unauthenticated, no-tool profile: FastGate guarantees
    its implemented server contract; Code Assist Harness later accepts and owns endpoint, mapping,
    failure/retry, cancellation, and local-cleanup policy for its adapter. A non-loopback profile waits
    for a separately implemented and conformance-tested FastGate authentication/TLS story.
-4. ICGT-022 packages and validates the exact frozen artifacts, records the bundle manifest/digest,
+5. ICGT-022 packages and validates the exact frozen artifacts, records the bundle manifest/digest,
    and may not change semantics without a new contract version and handoff review.
-5. A later Code Assist Harness story owns `FastGateProvider`, pins that manifest/digest, and accepts
+6. A later Code Assist Harness story owns `FastGateProvider`, pins that manifest/digest, and accepts
    the client side of the joint no-tool profile. Full coding-agent parity additionally requires a
    separately reviewed, versioned FastGate tool extension and compatible harness contract, with the
    harness remaining correctness authority.
@@ -117,15 +131,21 @@ failure domains, model placement, and cache-affinity strategies using measured s
 
 ```text
 deterministic FastGate fake
-        -> OpenAI live baseline
+        -> stateless local demo runtime
+        -> deterministic streaming and cancellation
+        -> opt-in OpenAI adapter through non-runnable test seams
+        -> reviewed runnable-live security profile
+        -> OpenAI live gateway baseline
         -> direct versus FastGate comparison
         -> Groq limited workloads
         -> capability-aware routing
         -> optional self-hosted runtime
 ```
 
-The deterministic fake is the first implementation. OpenAI is the first live provider. Those
-statements are complementary, not competing sequences.
+The deterministic fake is the first provider implementation and remains the strict test oracle. The
+stateless demo is the first runnable local provider. OpenAI is the first live provider, but it does
+not become runnable until the intervening security profile is implemented. Those statements are
+complementary, not competing sequences.
 
 ## Framework and caching progression
 
@@ -138,9 +158,8 @@ statements are complementary, not competing sequences.
 
 ## Detailed-planning boundary
 
-The detailed, linked story list now ends at the delivered ICGT-010 HTTP-presentation unit. ICGT-011
-remains an outcome slice until its service-mounting, actual-listener, runtime-provider, and
-bounded-concurrency decisions are promoted into a reviewed story and lesson. Later rows in
-[the backlog](../user-stories/backlog.md) are outcome slices, not promises that their contracts are
-ready. Before promoting one, create its story and lesson, lock dependencies and exclusions, and name
-the exact human review checkpoint.
+The detailed, linked story list now ends at the implementation-ready
+[ICGT-011 safe local demo runtime](../user-stories/icgt-011-bind-local-demo-runtime.md), which remains
+Planned. ICGT-012 and later rows in [the backlog](../user-stories/backlog.md) are outcome slices, not
+promises that their contracts are ready. Before promoting one, create its story and lesson, lock
+dependencies and exclusions, and name the exact human review checkpoint.
