@@ -73,9 +73,11 @@ checks the actual listener, or bounds concurrent admitted model turns.
   `provider.Invoker`; `demo.New() (*Provider, error)` constructs its immutable result.
 - Its constructor creates one valid immutable `provider.Result` whose output is exactly
   `FastGate local demo response.` and whose usage is absent.
-- Every non-terminated invocation returns that result. A context already canceled or expired before
-  the call returns the exact matching context sentinel allowed by the provider port; this is basic
-  port compliance, not cancellation-conformance evidence.
+- `Invoke` observes `ctx.Err()` once immediately before selecting an outcome. If that observation is
+  `context.Canceled` or `context.DeadlineExceeded`, it returns a zero `provider.Result` and that exact
+  sentinel. If the observation is nil, it selects and returns the immutable demo result; cancellation
+  after that observation does not replace the selected result. This single observation is basic port
+  compliance, not cancellation-conformance or cancellation-race evidence.
 - The provider has no mutable request state and is safe for concurrent calls. It does not inspect,
   retain, copy, log, or echo conversation or instruction content.
 - It has no script, model ID, credential, endpoint, network client, goroutine, timer, retry, usage
@@ -154,18 +156,19 @@ policy, or proof that a later attempt is safe or free.
 - Preserve the existing validation order. A nil context returns exactly
   `serve FastGate: context is required`; no listener close is attempted and the caller retains any
   supplied listener on that path.
-- After a nonnil context is validated, treat a nil listener interface or typed-nil
-  `*net.TCPListener` as a missing required input: return exactly
-  `serve FastGate: listener is required` and make no close attempt because no usable resource exists.
+- After a nonnil context is validated, treat a nil listener interface or any nil dynamic listener
+  value as a missing required input. This includes a typed-nil `*net.TCPListener` and a typed-nil
+  custom pointer wrapper. Return exactly `serve FastGate: listener is required` without calling
+  `Addr` or `Close`, because no usable resource exists and ownership has not transferred.
 - Only after those checks and before starting the server goroutine, require the listener itself to be
   a `*net.TCPListener` and its `Addr()` to be a `*net.TCPAddr` with an IPv4 or IPv6 loopback IP. An
   interface wrapper that merely reports a loopback-looking TCP address is rejected because its
   reported address does not prove the underlying listener type.
-- Reject wildcard, unspecified, LAN/global, Unix, wrapped, and unknown nonnil listener or address
-  types. Do not format the rejected address into logs or errors.
-- Listener ownership transfers to `Serve` only after the nonnil context and nonnil listener checks.
-  When later admission fails, close the rejected listener exactly once before returning exactly
-  `serve FastGate: listener must be a loopback TCP listener`.
+- Reject wildcard, unspecified, LAN/global, Unix, wrapped, and unknown dynamically nonnil listener or
+  address types. Do not format the rejected address into logs or errors.
+- Listener ownership transfers to `Serve` only after the nonnil context and dynamic-nil listener
+  checks. When later admission fails, close the rejected listener exactly once before returning
+  exactly `serve FastGate: listener must be a loopback TCP listener`.
 - If rejection cleanup also fails, retain that fact only as the fixed sentinel/category
   `close rejected FastGate listener`. Join those two fixed errors so the exact diagnostic is the base
   line followed by the cleanup line. Deliberately discard rather than wrap the arbitrary raw close
@@ -184,8 +187,13 @@ policy, or proof that a later attempt is safe or free.
 
 - `gateway/cmd/fastgate/main.go` remains the composition root. It constructs, in order, the local demo
   provider, executor, bounded HTTP handler, service, and TCP listener.
-- Parse `-max-concurrent-model-turns` beside `-listen`. Invalid capacity fails before listener
-  creation. Keep operation errors bounded and content-free.
+- Parse `-max-concurrent-model-turns` beside `-listen`. Invalid capacity fails before provider,
+  handler, service, or listener construction. A malformed value or other flag-parse failure returns
+  exactly `parse startup configuration: invalid arguments`. Do not emit, wrap, format, or return the
+  standard `flag` package diagnostic because it quotes the complete raw token. The raw token must be
+  absent from both parser output and the returned error, and an invalid occurrence remains invalid
+  even if a later duplicate occurrence is valid. Range failures also use fixed bounded text and never
+  include the supplied value.
 - The default command mounts both health and model-turn handling once actual-listener validation
   succeeds. No opt-in demo flag is required.
 - Keep ICGT-005 graceful-first shutdown. Cancellation stops server admission, bounded shutdown lets
@@ -215,15 +223,16 @@ policy, or proof that a later attempt is safe or free.
 
 ## Human-sized implementation checkpoints
 
-1. **Demo provider:** add the immutable fixed result, direct context behavior, concurrent tests, and
-   proof that request content is neither inspected nor echoed.
+1. **Demo provider:** add the immutable fixed result, one initial context observation, concurrent
+   tests, and proof that request content is neither inspected nor echoed.
 2. **Bounded model-turn handler:** validate 1 through 16 permits, preserve preflight precedence, prove
    exact no-read/no-dispatch overload, hold the permit through writes, and prove panic-safe reuse.
 3. **Service boundary:** inject the inference handler, dispatch health without path cleaning, validate
    the actual listener, and prove rejected-listener cleanup before any server or provider work.
-4. **Runnable composition:** add the CLI setting and explicit command wiring, then prove health,
-   completed demo inference, unusual Host non-authorization, saturation, graceful shutdown, and
-   response cleanup through a proxy-disabled real loopback client.
+4. **Runnable composition:** add the normalized CLI setting and explicit command wiring, then prove
+   hostile flag values are never echoed and prove health, completed demo inference, unusual Host
+   non-authorization, saturation, graceful shutdown, and response cleanup through a proxy-disabled
+   real loopback client.
 
 Each checkpoint passes its focused tests before the next begins. Stop for review rather than starting
 M2 behavior inside one of these checkpoints.
@@ -231,11 +240,16 @@ M2 behavior inside one of these checkpoints.
 ## Acceptance criteria
 
 1. The demo provider returns exactly `FastGate local demo response.` with usage absent for concurrent
-   valid calls, echoes no request content, makes no external call, and passes race-enabled tests.
+   active-context calls, echoes no request content, and makes no external call. One initial
+   `ctx.Err()` observation returns a zero result and the exact pre-canceled or pre-expired sentinel;
+   a nil observation selects the fixed result without a later cancellation override. Focused and
+   race-enabled tests pass without claiming which outcome wins a concurrent cancellation race.
 2. The command selects that demo by default and never constructs the strict scripted fake or a live
    provider.
 3. Handler construction accepts limits 1 through 16, rejects zero, negative, and 17 before capacity
-   allocation, and the CLI default is exactly 4.
+   allocation, and the CLI default is exactly 4. Malformed or hostile numeric values return the exact
+   fixed parse error before runtime construction, produce no parser output, and expose no raw token;
+   an invalid value cannot be cleared by a later duplicate flag.
 4. Target, method, encoding, and media rejection retains ICGT-010's exact behavior while capacity is
    full and consumes no permit, body read, or provider call.
 5. Exactly the configured number of transport-valid controlled requests may enter body/provider work.
@@ -252,13 +266,16 @@ M2 behavior inside one of these checkpoints.
 9. The explicit dispatcher inspects only parsed `URL.Path`, passes every request unchanged, and does
    not redirect, clean, or accept model-turn target spellings that the ICGT-010 handler rejects.
 10. `Service.Serve` first rejects a nil context with its exact existing error, makes no close attempt,
-    and leaves any supplied listener with the caller. With a nonnil context, a nil interface or
-    typed-nil `*net.TCPListener` returns the exact required-listener error without a close. Actual IPv4
-    and IPv6 loopback `*net.TCPListener` values are accepted; wildcard, unspecified, non-loopback,
-    Unix, wrapped, and unknown nonnil listeners or addresses are rejected before server work begins.
-11. Every nonnil rejected actual listener is closed exactly once. The base diagnostic is exactly
-    `serve FastGate: listener must be a loopback TCP listener`; a cleanup failure adds only the fixed
-    `close rejected FastGate listener` line and never exposes or wraps raw listener error text.
+    and leaves any supplied listener with the caller. With a nonnil context, a nil interface or any
+    nil dynamic listener value—including typed-nil TCP and custom pointer wrapper values—returns the
+    exact required-listener error without calling `Addr` or `Close`. Actual IPv4 and IPv6 loopback
+    `*net.TCPListener` values are accepted; wildcard, unspecified, non-loopback, Unix, dynamically
+    nonnil wrapped, and unknown dynamically nonnil listeners or addresses are rejected before server
+    work begins.
+11. Every dynamically nonnil rejected actual listener is closed exactly once. The base diagnostic is
+    exactly `serve FastGate: listener must be a loopback TCP listener`; a cleanup failure adds only
+    the fixed `close rejected FastGate listener` line and never exposes or wraps raw listener error
+    text.
 12. A real proxy-disabled loopback exchange crosses command-equivalent demo, executor, bounded
     handler, service, and listener composition and returns the exact completed model-turn document.
 13. A non-loopback-looking Host sent over the accepted loopback connection does not become an
@@ -272,8 +289,10 @@ M2 behavior inside one of these checkpoints.
 
 Minimum focused evidence includes:
 
-- demo construction, fixed result, absent usage, pre-terminated context, sentinel-content
-  non-reflection, concurrent calls, and race execution;
+- demo construction, fixed result, absent usage, active context, separately pre-canceled and
+  pre-expired contexts, exact zero-result sentinels, sentinel-content non-reflection, concurrent
+  calls, and race execution; no timing test requires cancellation after the single observation to
+  replace an already selected result;
 - handler limits -1, 0, 1, 4, 16, and 17 without allocating invalid capacity;
 - channel-controlled exact-capacity admission, immediate one-over rejection, zero body reads, zero
   extra invocations, and successful permit reuse without sleeps;
@@ -288,14 +307,17 @@ Minimum focused evidence includes:
 - real IPv4 and available IPv6 loopback `*net.TCPListener` acceptance plus real wildcard rejection;
   a pure TCP-address classifier covers unspecified and LAN/global IPs without requiring an external
   interface; Unix, wrapped-loopback-reporting, and synthetic listeners are rejected at the
-  concrete-listener boundary, while nil interface and typed-nil TCP cases separately prove the
-  required-listener error and zero close attempts;
+  concrete-listener boundary, while nil interface, typed-nil TCP, and typed-nil custom pointer-wrapper
+  cases separately prove the required-listener error, no `Addr` or `Close` call, and no server start;
 - nil-context precedence with both nil and nonnil listeners, proving the exact context error, zero
   close attempts, and caller-retained listener ownership;
 - configured-loopback/actual-non-loopback mismatch, zero server starts, rejected-listener close, and
   exact fixed base/cleanup diagnostics whose error chain omits the raw close cause;
 - `-max-concurrent-model-turns` default, exact endpoints, below/above rejection, positional-argument
-  rejection, and construction before listener creation;
+  rejection, and construction before listener creation; nonnumeric fake-sensitive-marker and
+  extremely long values prove the exact bounded parse error, empty parser output, raw-token absence,
+  sticky invalidity across a later duplicate flag, and zero provider, handler, service, or listener
+  construction;
 - one real proxy-disabled loopback completed exchange with bounded response read/close, an unusual
   Host value, health availability, service cancellation, graceful drain, and joined Serve result;
 - focused repeated tests, `go vet ./...`, `go test -race ./...`, `git diff --check`, the applicable
@@ -309,9 +331,9 @@ Minimum focused evidence includes:
   listener admission in [`service.go`](../gateway/internal/service/service.go), and final composition
   in [`main.go`](../gateway/cmd/fastgate/main.go).
 - **Failure/test path:** Review the planned demo tests and permit-focused handler tests, then trace
-  [`service_test.go`](../gateway/internal/service/service_test.go) for rejected-listener closure and
-  the planned command integration test for saturation, health bypass, abort release, and graceful
-  shutdown.
+  [`service_test.go`](../gateway/internal/service/service_test.go) for dynamic-nil handling and
+  rejected-listener closure, plus the planned command integration test for hostile flag privacy,
+  saturation, health bypass, abort release, and graceful shutdown.
 - **Invariant:** The reviewer can explain why only transport-valid model turns consume one of at most
   the configured permits before reading a body, why the permit remains held through the write and is
   always returned, and why actual loopback reachability is not caller authentication.

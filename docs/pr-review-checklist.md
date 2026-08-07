@@ -209,6 +209,9 @@ future silent drop.
   encoding inside the accepted range?
 - If an error channel carries caller cancellation, must the returned sentinel match the supplied
   caller context rather than trusting an adapter's assertion?
+- Does every timing-sensitive requirement name the implementation observation or synchronization
+  point that can enforce it? An event promised merely “before return” can occur after the final
+  observation and is not atomically enforceable.
 - Are success, normalized failure, and caller termination mutually exclusive, including zero-value,
   typed-nil, wrapped-error, and simultaneous result/error cases?
 - Does rejection of untrusted error types avoid traversing provider-controlled `Unwrap` or `As`
@@ -279,9 +282,10 @@ mutex.
   concrete TCP address rather than trusting configuration or an arbitrary wrapper's reported
   `Addr()`? Does rejection close owned resources exactly once with diagnostics that cannot expose an
   untrusted cleanup error?
-- Before listener ownership transfers, are nil context, nil interface, and typed-nil concrete pointer
-  cases handled without calling `Addr` or `Close`? Is ownership on each early error explicit, with
-  only nonnil owned admission rejections closed by the callee?
+- Before listener ownership transfers, are nil context, nil interface, and every nil-capable dynamic
+  listener value handled without calling `Addr` or `Close`? Does a typed-nil non-TCP wrapper prove the
+  code did not special-case only the admitted concrete type? Is ownership on each early error
+  explicit, with only dynamically nonnil owned admission rejections closed by the callee?
 - Before a live or billable provider becomes runnable, has review selected and tested Host, Origin,
   CORS, DNS-rebinding, and caller-authentication policy even when the listener remains loopback-only?
   Strict media types and absent CORS permission are not a security boundary.
@@ -289,6 +293,20 @@ mutex.
 Why: standard-library transport behavior can add, suppress, drain, or normalize data outside the
 obvious handler calls. Direct-handler evidence and real-server evidence prove different ownership
 claims and should not be substituted for each other.
+
+### Go command-line parsing boundaries
+
+- Can a standard-library parser quote the complete raw flag name or value in both its output and
+  returned error?
+- Is parser output suppressed or replaced, and is the raw parse error discarded rather than wrapped
+  into a process-level log?
+- Does malformed numeric state remain sticky when a later duplicate flag is valid?
+- Do hostile nonnumeric and extremely long values prove one exact bounded content-free error, empty
+  parser output, absence of a fake sensitive marker, and zero downstream construction?
+
+Why: configuration text is untrusted and can contain an accidentally pasted credential or an
+extremely long token. A fixed validation category is safer than allowing a convenience parser to turn
+the complete value into a diagnostic.
 
 ### Bounded handler admission and load shedding
 
@@ -469,3 +487,14 @@ abort-unwind, full health-dispatch, concrete-listener, fixed cleanup-diagnostic,
 tests before ICGT-011 is Done. The same review also found that a listener wrapper can lie through
 `Addr()` and that a local live provider would introduce browser-origin and DNS-rebinding risk before
 any remote deployment; those checks now remain explicit prerequisites rather than implied safety.
+
+PR #11's automated review then exposed three additional reusable specification traps. First,
+“canceled before return” named no enforceable observation point, so the demo now locks one initial
+`ctx.Err()` observation. Cancellation racing that observation may yield either allowed outcome, while
+cancellation after a nil observation does not overwrite the selected result. Second, a typed-nil
+listener is not limited to `*net.TCPListener`; any nil-capable dynamic listener value is missing input
+before method calls or ownership, and a typed-nil custom wrapper must prove that rule. Third, Go's
+standard integer flag diagnostics quote the complete malformed value; command parsing must instead
+return one fixed error with no parser output or raw token, retain invalidity across duplicate flags,
+and prove hostile values trigger no runtime construction. These are planned regression requirements
+until the ICGT-011 implementation supplies the named tests.

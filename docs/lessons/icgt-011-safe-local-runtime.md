@@ -184,10 +184,39 @@ The planned demo provider has a different contract:
 
 The planned source paths are `gateway/internal/provider/demo/demo.go` and
 `gateway/internal/provider/demo/demo_test.go`. These files do not exist yet. The demo is not a
-general provider simulator, and it is not evidence that real inference occurred. The one terminal
-context rule is basic port compliance: if the supplied context is already canceled or expired, the
-demo will return that exact context sentinel instead of the fixed result. This is not evidence for
-the cancellation-conformance work deferred beyond M1.
+general provider simulator, and it is not evidence that real inference occurred.
+
+The terminal-context rule needs an observable boundary. “Canceled any time before `Invoke` returns”
+cannot be guaranteed: cancellation could occur after the provider's last context check but before
+control reaches the caller. The demo therefore makes one `ctx.Err()` observation immediately before
+selecting an outcome. An observed `context.Canceled` or `context.DeadlineExceeded` produces a zero
+result and that exact sentinel. A nil observation selects the immutable result, and later
+cancellation does not replace it. Pre-canceled and pre-expired tests prove this basic port behavior;
+they are not cancellation-race or full cancellation-conformance evidence.
+
+### **PLANNED** startup parsing keeps raw values out of diagnostics
+
+Command-line arguments are untrusted text. A user can accidentally paste a credential where a
+number belongs, and an argument can be extremely long. Go's standard `flag` integer handling returns
+and writes a diagnostic that quotes the complete invalid value. Wrapping that error would copy the
+raw token into FastGate's process log and make diagnostic size depend on caller input.
+
+ICGT-011 therefore requires a content-safe parse boundary. A malformed value produces exactly:
+
+```text
+parse startup configuration: invalid arguments
+```
+
+The raw token and the standard parser diagnostic appear in neither parser output nor the returned
+error. Parsing also records invalidity before any provider, handler, service, or listener is
+constructed, and that state remains invalid if a later duplicate flag contains a valid value. A
+private bounded numeric parser or sticky safe flag value can implement this behavior; directly
+registering an `IntVar` and wrapping its error cannot.
+
+Tests use a clearly fake sensitive marker and a very long numeric token. They assert the exact fixed
+error, empty parser output, marker absence, bounded diagnostic length, sticky invalidity, and zero
+runtime construction. The goal is not to hide which configuration area failed; it is to avoid
+turning the supplied value itself into output.
 
 ### **PLANNED** explicit dispatch preserves exact target behavior
 
@@ -318,8 +347,16 @@ The defer also covers ordinary returns and unexpected panics. It is cleanup, not
 ### **PLANNED** actual-listener admission happens before serving
 
 After the context and listener required-input checks pass, `Service.Serve` receives ownership of the
-nonnil listener. Before starting the HTTP server, the planned code will require the listener itself to be a
-`*net.TCPListener` and its address to be a concrete `*net.TCPAddr` containing a loopback IP.
+dynamically nonnil listener. Before starting the HTTP server, the planned code will require the
+listener itself to be a `*net.TCPListener` and its address to be a concrete `*net.TCPAddr` containing
+a loopback IP.
+
+A Go interface contains a dynamic type and a dynamic value. The interface can compare unequal to
+`nil` while holding a nil pointer—for example, a `net.Listener` containing a typed-nil custom wrapper.
+Calling `Addr` or `Close` through that interface may panic if the method dereferences its receiver.
+The planned missing-input check must therefore recognize every nil-capable dynamic listener value
+before invoking any listener method. This narrow nil check does not weaken the later explicit
+`*net.TCPListener` admission assertion.
 
 Accepted examples include:
 
@@ -341,15 +378,17 @@ wrapped listener    may only report a loopback-looking address
 
 The existing nil-context check remains first. It returns exactly
 `serve FastGate: context is required`, makes no listener close attempt, and leaves any supplied
-listener with the caller. After a nonnil context is validated, a nil listener interface or typed-nil
-`*net.TCPListener` is a missing input, not an owned rejection. It returns the existing exact error
-`serve FastGate: listener is required` and makes no close attempt because no usable resource exists.
+listener with the caller. After a nonnil context is validated, a nil listener interface or any nil
+dynamic listener value—including typed-nil TCP and custom pointer-wrapper values—is a missing input,
+not an owned rejection. It returns the existing exact error
+`serve FastGate: listener is required` without calling `Addr` or `Close`, because no usable resource
+exists.
 
-For every nonnil admission rejection, the base error remains exactly
+For every dynamically nonnil admission rejection, the base error remains exactly
 `serve FastGate: listener must be a loopback TCP listener`. It does not copy an arbitrary listener
 address into a diagnostic. Because ownership has transferred to `Serve`, that rejected listener is
 closed exactly once before the method returns. Ownership transfers only after the nonnil context and
-nonnil listener checks. If the close also fails, the returned error joins only the fixed cleanup
+dynamic-nil listener checks. If the close also fails, the returned error joins only the fixed cleanup
 category `close rejected FastGate listener`; it deliberately does not wrap or reveal the arbitrary
 raw close error. The server goroutine and provider path never start.
 
@@ -390,10 +429,12 @@ has no remote work, while later cancellation and provider-cleanup stories must d
 | Boundary | Planned owner and invariant |
 | --- | --- |
 | Provider choice | The command explicitly selects the fixed demo; the strict fake remains test-only. |
+| Demo context | One initial `ctx.Err()` observation selects either the exact terminal sentinel or the immutable result; later cancellation does not overwrite that choice. |
+| CLI parsing | Malformed arguments produce one fixed bounded error without emitting or returning the raw token. |
 | Transport | Existing preflight retains `404`, `405`, and `415` behavior before capacity admission. |
 | Capacity | At most the configured 1-16 valid model turns enter body admission; excess work waits nowhere and dispatches zero times. |
 | Health | The service dispatcher selects only parsed `/healthz`, passes requests unchanged, and bypasses inference permits. |
-| Listener | `Service.Serve` verifies a concrete loopback `*net.TCPListener`, closes a rejection, and starts no server first. |
+| Listener | `Service.Serve` calls no methods on any nil dynamic listener value, then verifies a concrete loopback `*net.TCPListener`, closes a dynamically nonnil rejection, and starts no server first. |
 | Cleanup | Deferred permit release preserves abort panics; existing bounded shutdown force-closes if draining fails and joins. |
 | Repository boundary | FastGate owns transport; Code Assist Harness continues to own workflow, tools, approvals, and correctness. |
 
@@ -410,8 +451,10 @@ Implementation is planned in four human-sized checkpoints.
 
 Add the planned `gateway/internal/provider/demo/demo.go` and its focused test. Construct one valid
 immutable provider result containing `FastGate local demo response.` and absent usage. Prove repeated
-and concurrent invocations return the same valid value without echoing request content or sharing
-mutable request state.
+and concurrent active-context invocations return the same valid value without echoing request content
+or sharing mutable request state. Separately prove that the single initial context observation
+returns exact sentinels for pre-canceled and pre-expired contexts without claiming a concurrent race
+must select cancellation.
 
 Review pause: explain why this runtime implementation satisfies the provider port while the strict
 fake remains the better assertion tool in tests.
@@ -430,7 +473,9 @@ and one `http.ErrAbortHandler` path.
 
 Extend the service with explicit health/model-turn dispatch and actual-listener validation. Prove
 IPv4 and IPv6 loopback `*net.TCPListener` acceptance, fixed rejection of wildcard, non-loopback,
-non-TCP, and wrapped listeners, exact rejection cleanup, and no server start on rejection. Prove the
+non-TCP, and dynamically nonnil wrapped listeners, exact rejection cleanup, and no server start on
+rejection. Use a typed-nil custom wrapper whose methods panic if called to prove every nil dynamic
+listener value is rejected as missing before method invocation or ownership transfer. Prove the
 parsed-path health matrix stays responsive while all inference permits are held.
 
 Review pause: identify which address is configuration and which object supplies runtime evidence.
@@ -439,8 +484,10 @@ Review pause: identify which address is configuration and which object supplies 
 
 Extend `gateway/cmd/fastgate/main.go` and add the planned
 `gateway/cmd/fastgate/main_test.go`. Thread the `-max-concurrent-model-turns` value through startup,
-validate the inclusive 1-16 range, then assemble demo provider, executor, handler, service, and
-listener explicitly.
+normalize malformed parser failures without echoing the raw token, validate the inclusive 1-16
+range, then assemble demo provider, executor, handler, service, and listener explicitly. Prove an
+invalid occurrence remains sticky across a later duplicate flag and that hostile values fail before
+runtime construction.
 
 Run one real proxy-disabled loopback exchange through the complete process-equivalent path. Bound and
 close every response body. Exercise shutdown without synchronization sleeps. Then update this lesson
@@ -468,13 +515,13 @@ not exist yet.
 | Planned path | Review focus |
 | --- | --- |
 | `gateway/internal/provider/demo/demo.go` | Stateless fixed result, absent usage, no content echo |
-| `gateway/internal/provider/demo/demo_test.go` | Repeatable and concurrent behavior under the race detector |
+| `gateway/internal/provider/demo/demo_test.go` | Repeatable concurrent behavior plus the single pre-terminated context observation under the race detector |
 | `gateway/internal/modelturnhttp/handler.go` | Preflight-before-permit order, full permit lifetime, fixed overload response |
 | `gateway/internal/modelturnhttp/concurrency_test.go` if needed | Channel-controlled saturation, zero read/dispatch, reuse, abort release |
 | `gateway/internal/service/service.go` | Explicit dispatch, actual-listener validation, rejection cleanup, unchanged shutdown |
-| `gateway/internal/service/service_test.go` | Loopback matrix, no-start rejection, health bypass, bounded lifecycle |
+| `gateway/internal/service/service_test.go` | Dynamic-nil safety, loopback matrix, no-start rejection, health bypass, bounded lifecycle |
 | `gateway/cmd/fastgate/main.go` | Explicit composition and bounded CLI setting |
-| `gateway/cmd/fastgate/main_test.go` | Startup validation and command-equivalent local exchange |
+| `gateway/cmd/fastgate/main_test.go` | Content-safe hostile-value validation and command-equivalent local exchange |
 
 The most important production path for personal review will be transport preflight through permit
 acquisition and deferred release in `handler.go`. The most important failure paths will be the
@@ -490,15 +537,17 @@ not final Go APIs or syntax.
 ### **PSEUDOCODE ONLY — happy path and owned cleanup**
 
 ```text
-config = parse and validate startup flags
+config = parse and validate startup flags without emitting or returning raw invalid tokens
+return fixed invalid-arguments error before construction when parsing recorded any failure
 demo = construct fixed-output demo provider
+demo.invoke = observe ctx.Err once, then select exact sentinel or immutable result
 executor = construct model-turn executor(demo)
 handler = construct bounded model-turn HTTP handler(executor, max concurrency)
 service = construct HTTP service(config, handler)
 listener = bind configured TCP address
 serve(ctx, listener):
     return context-required error and retain caller ownership when ctx is nil
-    return required-listener error without close when listener is nil or typed-nil TCP
+    return required-listener error without method calls when interface or dynamic value is nil
     otherwise reject and close unless it is *net.TCPListener with loopback *net.TCPAddr
     start existing bounded server lifecycle
 
@@ -532,10 +581,12 @@ Channels provide observable checkpoints without scheduler-dependent sleeps.
 | Scenario | Responsible boundary | Safe planned outcome | Deterministic evidence |
 | --- | --- | --- | --- |
 | Context is nil with any listener | Service input validation | Exact context-required error; caller retains listener; no server/provider start | Nil and nonnil listener cases |
-| Listener is nil or typed-nil TCP | Service input validation | Exact required-listener error; no close or server/provider start | Direct missing-input cases |
-| Actual listener is wildcard, LAN, wrapped, or non-TCP | Service listener admission | Close once; exact fixed error; no server/provider start | Real TCP listeners plus rejection/cleanup seam |
+| Listener interface or any dynamic listener value is nil | Service input validation | Exact required-listener error; no `Addr`, close, or server/provider start | Nil interface, typed-nil TCP, and panic-on-method typed-nil wrapper cases |
+| Actual listener is wildcard, LAN, dynamically nonnil wrapped, or non-TCP | Service listener admission | Close once; exact fixed error; no server/provider start | Real TCP listeners plus rejection/cleanup seam |
 | Rejected-listener close also fails | Service listener cleanup | Add only fixed cleanup category; omit raw cause | Exact joined-error and `errors.Is` test |
-| Concurrency setting is 0 or above 16 | Startup/config validation | Reject before listener creation | Table-driven command/config test |
+| Demo context is already canceled or expired at its one observation | Demo provider | Zero result plus exact matching direct sentinel | Pre-canceled and pre-expired table cases; no race winner claim |
+| Concurrency setting is 0 or above 16 | Startup/config validation | Fixed bounded rejection before runtime construction | Table-driven command/config test |
+| Concurrency setting is malformed, extremely long, or invalid before a later duplicate | Startup parsing | Exact generic parse error; empty parser output; no raw token or runtime construction | Fake-sensitive marker, long token, and sticky-invalid table cases |
 | Four valid requests are active | Model-turn permit gate | Fifth gets exact 503; zero body reads/provider calls | Channel-controlled saturation test |
 | Invalid media request arrives while saturated | Existing transport preflight | Preserve exact 415; consume no permit | Saturated preflight precedence test |
 | Health or an alternate health spelling arrives while saturated | Explicit dispatcher | Preserve parsed-path health behavior or unchanged model-handler 404 | Held permits plus dispatch matrix |
@@ -546,13 +597,14 @@ Channels provide observable checkpoints without scheduler-dependent sleeps.
 The tests must not log request bodies or embed real secrets. A clearly fake marker can prove that
 output does not derive from input.
 
-Minimum validation also covers limits 1 and 16 plus rejection at 0 and 17, exact overload headers,
+Minimum validation also covers limits 1 and 16 plus rejection at 0 and 17, exact content-safe
+malformed-argument behavior, exact overload headers, active/pre-canceled/pre-expired demo cases,
 demo concurrency under the race detector, the complete health dispatch matrix, real IPv4 and
 available IPv6 loopback listeners, real wildcard rejection, pure LAN/global address classification,
-wrapped-listener rejection, and one real proxy-disabled loopback exchange through the full assembly.
-Focused repeated tests, race tests, `go vet`, the PR review checklist, an
-independent concurrency/cleanup/security review, and the offline credential-free `./scripts/check`
-remain required before Done.
+dynamically nonnil wrapped-listener rejection, arbitrary typed-nil wrapper safety, and one real
+proxy-disabled loopback exchange through the full assembly. Focused repeated tests, race tests,
+`go vet`, the PR review checklist, an independent concurrency/cleanup/security review, and the
+offline credential-free `./scripts/check` remain required before Done.
 
 ## User-visible speed and response-size impact
 
@@ -583,8 +635,14 @@ Implementation evidence does not exist yet. The approved readiness discussion se
 
 - a default-enabled stateless fixed demo instead of the finite strict fake, prompt echo, or an
   always-unavailable placeholder;
+- one initial `ctx.Err()` observation instead of the impossible promise that any cancellation before
+  function return must win;
 - concrete `*net.TCPListener` loopback enforcement instead of trusting configuration text or an
   arbitrary wrapper's reported address;
+- missing-input classification for every nil dynamic listener value before `Addr`, `Close`, or
+  ownership transfer, rather than special-casing only typed-nil TCP;
+- one fixed content-safe startup parse error, sticky invalid numeric state, and hostile-value evidence
+  instead of wrapping the standard `flag` diagnostic that quotes raw input;
 - no Host allowlist because Host does not authenticate the connection;
 - an explicit prerequisite to review browser-origin, DNS-rebinding, CORS, and authentication policy
   before a live or billable provider can be mounted in any runnable profile, alongside or instead of
@@ -670,6 +728,12 @@ for “more scale” is not sufficient evidence.
 - The concrete `*net.TCPListener` and its `*net.TCPAddr`, not configuration text, a wrapper's report,
   or the Host header, prove that the process bound TCP loopback. Loopback still does not authenticate
   callers or address browser-origin risk.
+- A nonnil interface can contain a nil dynamic listener value; missing-input detection must happen
+  before any method call or ownership transfer, while positive admission still requires concrete TCP.
+- Timing-sensitive behavior must name an observation point. The demo's one initial context check
+  selects a terminal sentinel or result without pretending it can atomically govern later races.
+- Startup diagnostics must not quote untrusted numeric tokens; malformed input gets one fixed bounded
+  error before runtime construction.
 - Transport preflight precedes the permit gate, so detailed transport failures remain stable and do
   not consume inference capacity.
 - A permit covers body admission through response writing, and a deferred release runs during normal
@@ -690,23 +754,29 @@ for “more scale” is not sufficient evidence.
 - **Load shedding:** Rejecting excess work promptly to protect bounded capacity.
 - **Loopback:** Host-local IP address space such as IPv4 `127.0.0.0/8` or IPv6 `::1`; not caller
   authentication.
+- **Observation point:** The exact operation where code can know an event or state. Requirements about
+  concurrent timing must be defined relative to such a point rather than a later function return.
 - **Permit:** A token granting temporary ownership of one slot in a bounded concurrent region.
 - **Panic unwinding:** Go's process of running deferred calls while a panic travels up the call stack.
 - **Strict fake:** A test implementation that verifies exact scripted interactions and treats
   mismatches as test-programming errors.
 - **Stateless demo provider:** The planned runtime `Invoker` that returns one fixed valid result
   without request-dependent mutable state, network calls, or credentials.
+- **Typed nil:** A Go interface with a dynamic type but a nil dynamic value; the interface itself can
+  compare unequal to `nil`, so calling a method may still be unsafe.
 
 See also the shared [repository glossary](../glossary.md).
 
 ## Teach-back questions
 
 1. Why must FastGate inspect the actual listener instead of trusting only the configured address, and
-   why is a nonnil rejected listener closed while a missing listener is not?
+   why does a typed-nil wrapper remain missing input while a dynamically nonnil rejected listener is
+   closed?
 2. What work does one model-turn permit bound, and why must its deferred release run when
    `http.ErrAbortHandler` panics?
 3. Why is the stateless fixed demo suitable for concurrent local runtime use while the strict
-   deterministic fake remains test-only?
+   deterministic fake remains test-only, and what does its single context observation deliberately
+   not promise?
 
 ## Further reading
 
@@ -719,5 +789,7 @@ See also the shared [repository glossary](../glossary.md).
 - [FastGate architecture boundary](../architecture.md)
 - [Go `net.Listener`](https://pkg.go.dev/net#Listener)
 - [Go `net.IP.IsLoopback`](https://pkg.go.dev/net#IP.IsLoopback)
+- [Go `reflect.Value.IsNil`](https://pkg.go.dev/reflect#Value.IsNil)
+- [Go `flag`](https://pkg.go.dev/flag)
 - [Go `http.ErrAbortHandler`](https://pkg.go.dev/net/http#ErrAbortHandler)
 - [Go `defer`, panic, and recover](https://go.dev/blog/defer-panic-and-recover)

@@ -63,7 +63,7 @@ Costs:
 
 ### C. Use a stateless fixed-output local demo
 
-This provider returns one fixed, valid result for every valid admitted request.
+This provider returns one fixed, valid result whenever its initial context observation is active.
 
 Advantages:
 
@@ -106,9 +106,11 @@ itself must be a `*net.TCPListener`, and its concrete `*net.TCPAddr` must contai
 loopback IP. A wrapper that merely reports a loopback-looking address is not evidence that the
 underlying listener is TCP. The existing context check still runs first: a nil context returns its
 fixed context-required error and leaves listener ownership with the caller. After a nonnil context is
-validated, a nil listener interface or typed-nil `*net.TCPListener` remains the existing
-missing-listener input error and cannot be closed. Wildcard, non-loopback, Unix, wrapped, and unknown nonnil
-listener forms are rejected, and each rejected owned listener is closed.
+validated, a nil listener interface or any nil dynamic listener value remains the existing
+missing-listener input error. That includes a typed-nil `*net.TCPListener` or custom pointer wrapper;
+neither `Addr` nor `Close` may be called because no usable resource exists. Wildcard, non-loopback,
+Unix, wrapped, and unknown dynamically nonnil listener forms are rejected, and each rejected owned
+listener is closed.
 
 This proves where the process is listening. It does not identify or authenticate the caller.
 
@@ -166,16 +168,21 @@ ICGT-011 will implement this exact first runnable profile:
 - the demo returns output text `FastGate local demo response.` and omits usage;
 - it does not inspect or echo prompt content, make network calls, read credentials, retry, stream, or
   claim to run a model;
+- `Invoke` observes `ctx.Err()` once immediately before selecting its outcome; an observed
+  `context.Canceled` or `context.DeadlineExceeded` returns a zero result and that exact sentinel,
+  while a nil observation selects the immutable demo result and is not replaced by later
+  cancellation;
 - `Service.Serve` accepts only a dynamic `*net.TCPListener` whose `*net.TCPAddr` contains a loopback
   IP; a listener wrapper is rejected even when its reported address looks like loopback TCP;
 - validation preserves the existing order: a nil context returns exactly
   `serve FastGate: context is required`, makes no listener close attempt, and leaves any supplied
   listener with the caller;
-- after a nonnil context is validated, a nil listener interface or typed-nil `*net.TCPListener`
-  returns exactly
-  `serve FastGate: listener is required` without a close attempt because no usable resource exists;
-- only then does listener ownership transfer for every nonnil listener, so an admission rejection is
-  closed exactly once before an error is returned;
+- after a nonnil context is validated, a nil listener interface or any nil dynamic listener value,
+  including a typed-nil `*net.TCPListener` or custom pointer wrapper, returns exactly
+  `serve FastGate: listener is required` without calling `Addr` or `Close` because no usable resource
+  exists;
+- only then does listener ownership transfer for every dynamically nonnil listener, so an admission
+  rejection is closed exactly once before an error is returned;
 - listener rejection returns exactly `serve FastGate: listener must be a loopback TCP listener`; if
   that close also fails, the returned joined diagnostic is exactly that line followed by
   `close rejected FastGate listener`, and the arbitrary raw close error is deliberately not wrapped or
@@ -187,6 +194,9 @@ ICGT-011 will implement this exact first runnable profile:
 - transport target, method, encoding, and media-type rejections retain ICGT-010 behavior and consume
   no inference permit;
 - `-max-concurrent-model-turns` selects a positive limit from 1 through 16, with default 4;
+- malformed startup arguments produce exactly `parse startup configuration: invalid arguments`;
+  the command neither emits nor returns the raw token or the standard `flag` package diagnostic, and
+  an invalid numeric value remains invalid even if a later duplicate flag is valid;
 - one nonblocking permit is acquired after successful transport preflight and before any body read;
 - the permit remains held through the response write and is released with `defer`, including when
   `http.ErrAbortHandler` unwinds the handler;
@@ -213,6 +223,10 @@ The fifth simultaneous transport-valid request at the default limit may receive 
 method, encoding, or media type still receives its specific transport response even while model-turn
 capacity is full, and health remains available.
 
+A malformed concurrency argument now produces one short generic startup error instead of echoing the
+supplied value. This is intentionally less detailed because command arguments can accidentally
+contain sensitive or extremely long content.
+
 Any process able to reach the loopback socket may call the unauthenticated demo. Host integrations
 around WSL or container networking may also make a loopback-bound service reachable from the local
 host. A hostile web page and DNS rebinding are not covered by this profile; strict JSON and absent
@@ -236,7 +250,9 @@ profile, not a safe remote deployment profile.
 - Requiring a concrete `*net.TCPListener` intentionally rejects listener wrappers such as TLS
   listeners. Any later TLS or wrapped-listener runtime profile must revise this admission decision
   rather than weakening it silently.
-- Streaming and its cancellation, deadline, cleanup, and slow-client rules begin in M2 with ICGT-012.
+- The demo's single initial context observation is only basic provider-port behavior. ICGT-015 owns
+  cancellation propagation and race evidence, ICGT-016 owns upstream deadlines and cleanup grace,
+  and ICGT-017 owns slow-client backpressure and memory bounds after ICGT-012 introduces SSE framing.
 - OpenAI remains the first live provider in M3 after deterministic streaming and operational evidence.
 - Code Assist Harness remains a separate client. ICGT-011 changes no harness workflow, tool, approval,
   transcript, retry, or correctness behavior.
